@@ -38,10 +38,10 @@ As regras do Firestore devem permitir que cada usuário acesse somente os dados 
 
 ## Demonstração online
 
-**Aplicação:** [INSIRA A URL DO FIREBASE HOSTING]
+**Aplicação:** (https://taskflow-br.web.app/)
 
-**Repositório:** [INSIRA A URL DO GITHUB]
+**Repositório:** 
 
 ## Autor
-
+Bryan Gabriel Botelho de Oliveira.
 Projeto acadêmico desenvolvido para praticar integração entre front-end, autenticação, banco de dados e hospedagem em nuvem.
