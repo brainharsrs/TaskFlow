@@ -40,7 +40,7 @@ As regras do Firestore devem permitir que cada usuário acesse somente os dados 
 
 **Aplicação:** (https://taskflow-br.web.app/)
 
-**Repositório:** 
+**Repositório:** (https://github.com/brainharsrs/TaskFlow)
 
 ## Autor
 Bryan Gabriel Botelho de Oliveira.
