@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#090b13" />
+  <meta name="description" content="TaskFlow — organização inteligente e progresso real." />
+  <title>TaskFlow — Organize seu próximo passo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- A tela de autenticação será conectada ao Firebase na etapa 3. -->
+  <main class="auth-shell" id="authShell">
+    <section class="auth-story">
+      <a class="brand brand-large" href="#inicio" aria-label="TaskFlow início">
+        <span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 21.5 16 29l16-18"/><path d="M7 11h12"/></svg></span>
+        <span>task<span class="brand-light">flow</span><i>.</i></span>
+      </a>
+      <div class="story-copy">
+        <span class="eyebrow"><span class="pulse-dot"></span> SEU ESPAÇO DE FOCO</span>
+        <h1>Menos caos.<br /><span>Mais feito.</span></h1>
+        <p>Transforme intenção em progresso. Um espaço para organizar suas prioridades, acompanhar seu ritmo e chegar mais longe.</p>
+      </div>
+      <div class="story-proof">
+        <div class="avatar-stack" aria-hidden="true"><span>G</span><span>M</span><span>A</span><span>+</span></div>
+        <div><strong>Um passo de cada vez.</strong><small>Seu progresso começa agora.</small></div>
+      </div>
+      <div class="story-orbit orbit-one" aria-hidden="true"></div><div class="story-orbit orbit-two" aria-hidden="true"></div>
+      <div class="story-bottom"><span>FOCO NO QUE IMPORTA</span><span>01 — 06</span></div>
+    </section>
+
+    <section class="auth-panel" aria-labelledby="authTitle">
+      <div class="auth-panel-top"><span class="mobile-brand">taskflow<span>.</span></span><span class="secure-label"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> AMBIENTE SEGURO</span></div>
+      <div class="auth-content">
+        <div class="auth-heading"><span class="eyebrow" id="formEyebrow">BEM-VINDO DE VOLTA</span><h2 id="authTitle">Bom ter você<br />por aqui<span>.</span></h2><p id="authSubtitle">Entre na sua conta e continue de onde parou.</p></div>
+        <div class="auth-tabs" role="tablist" aria-label="Tipo de acesso"><button class="auth-tab active" id="loginTab" type="button" role="tab" aria-selected="true">Entrar</button><button class="auth-tab" id="registerTab" type="button" role="tab" aria-selected="false">Criar conta</button></div>
+        <form id="authForm" novalidate>
+          <div class="field-group hidden" id="nameField"><label for="fullName">Como podemos te chamar?</label><div class="input-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><input id="fullName" name="fullName" autocomplete="name" placeholder="Seu nome" /></div><small class="field-error" id="nameError"></small></div>
+          <div class="field-group"><label for="email">E-mail</label><div class="input-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></svg><input id="email" name="email" type="email" autocomplete="email" placeholder="voce@exemplo.com" required /></div><small class="field-error" id="emailError"></small></div>
+          <div class="field-group"><div class="label-line"><label for="password">Senha</label><button type="button" class="text-action" id="forgotButton">Esqueci minha senha</button></div><div class="input-wrap"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg><input id="password" name="password" type="password" autocomplete="current-password" placeholder="Mínimo de 6 caracteres" required /><button class="password-toggle" id="togglePassword" type="button" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></div><small class="field-error" id="passwordError"></small></div>
+          <button class="button button-primary auth-submit" type="submit" id="submitAuth"><span id="submitText">Entrar na minha conta</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+        <div class="auth-divider"><span></span><small>OU EXPERIMENTE</small><span></span></div>
+        <button class="button button-ghost demo-button" id="demoButton" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/><circle cx="12" cy="12" r="5"/></svg> Explorar demonstração <span class="demo-arrow">↗</span></button>
+        <p class="legal-note">Ao continuar, você concorda em usar o TaskFlow com responsabilidade. <span>Seus dados ficam sob seu controle.</span></p>
+      </div>
+      <div class="auth-panel-footer"><span>© 2026 TASKFLOW</span><span>FEITO PARA IR MAIS LONGE <b>✳</b></span></div>
+    </section>
+  </main>
+
+  <!-- Dashboard de demonstração. A persistência será adicionada com o Firestore. -->
+  <main class="app-shell hidden" id="appShell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand sidebar-brand" href="#dashboard" aria-label="TaskFlow dashboard"><span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M8 21.5 16 29l16-18"/><path d="M7 11h12"/></svg></span><span>task<span class="brand-light">flow</span><i>.</i></span></a>
+      <div class="workspace-label">WORKSPACE <button type="button" class="tiny-icon" aria-label="Opções do espaço" id="workspaceOptions">•••</button></div>
+      <nav class="main-nav" aria-label="Navegação principal">
+        <button class="nav-item active" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>Visão geral <span class="nav-active-dot"></span></button>
+        <button class="nav-item" data-view="today"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>Hoje <span class="nav-count" id="todayCount">0</span></button>
+        <button class="nav-item" data-view="upcoming"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Próximas</button>
+        <button class="nav-item" data-view="completed"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg>Concluídas</button>
+      </nav>
+      <div class="sidebar-section-title">SEUS ESPAÇOS <button type="button" class="tiny-icon" id="addSpace" aria-label="Adicionar espaço">+</button></div>
+      <button class="project-link" data-project="Pessoal"><span class="project-dot violet"></span>Pessoal <span class="project-number">04</span></button>
+      <button class="project-link" data-project="Estudos"><span class="project-dot cyan"></span>Estudos <span class="project-number">03</span></button>
+      <button class="project-link" data-project="Projetos"><span class="project-dot orange"></span>Projetos <span class="project-number">02</span></button>
+      <div class="sidebar-spacer"></div>
+      <div class="upgrade-card"><div class="upgrade-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5L12 3Z"/></svg></div><strong>Pequenos passos,<br />grandes conquistas.</strong><p>Constância é o seu superpoder.</p><div class="upgrade-progress"><span></span></div><small>SEU FOCO, SEU RITMO</small></div>
+      <button class="profile-button" id="profileButton"><span class="profile-avatar" id="profileAvatar">B</span><span class="profile-text"><strong id="profileName">Brainha</strong><small>Plano pessoal</small></span><svg class="profile-more" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></button>
+    </aside>
+
+    <section class="dashboard-main">
+      <header class="topbar"><button class="icon-button mobile-menu" id="mobileMenu" aria-label="Abrir menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="breadcrumb"><span>Workspace</span><span class="crumb-slash">/</span><strong id="breadcrumbCurrent">Visão geral</strong></div><div class="topbar-actions"><label class="search-box" for="taskSearch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg><input id="taskSearch" type="search" placeholder="Buscar tarefas..." /><kbd>⌘ K</kbd></label><button class="icon-button notification-button" id="notificationButton" aria-label="Notificações"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><i></i></button><span class="topbar-avatar">B</span></div></header>
+      <div class="dashboard-content">
+        <div class="demo-banner"><span class="demo-banner-icon">✳</span><span><strong>Modo de demonstração</strong> · As alterações são temporárias e não estão salvas no Firebase ainda.</span><button id="dismissBanner" type="button" aria-label="Dispensar aviso">×</button></div>
+        <section class="welcome-row"><div><div class="date-kicker"><span class="date-line"></span><span id="todayDate">SEU DIA, DO SEU JEITO</span></div><h1 id="welcomeTitle">Vamos fazer acontecer<span>.</span></h1><p>Um pouco de foco hoje faz diferença amanhã.</p></div><button class="button button-primary create-task-button" id="createTaskButton"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Nova tarefa</button></section>
+        <section class="stats-grid" aria-label="Resumo de tarefas">
+          <article class="stat-card stat-featured"><div class="stat-top"><span>Foco em andamento</span><span class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3m0 12v3M3 12h3m12 0h3"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span></div><div class="stat-value"><strong id="activeStat">04</strong><span class="stat-trend">tarefas ativas</span></div><div class="stat-footer"><div class="mini-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><small>UM PASSO DE CADA VEZ</small></div></article>
+          <article class="stat-card"><div class="stat-top"><span>Concluídas</span><span class="stat-icon icon-green"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></span></div><div class="stat-value"><strong id="completedStat">08</strong><span class="stat-trend positive"><span>↗</span> progresso</span></div><div class="stat-note"><span class="tiny-check">✓</span> Toda conclusão conta.</div></article>
+          <article class="stat-card"><div class="stat-top"><span>Taxa de conclusão</span><span class="stat-icon icon-blue"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18V6m0 12h16M7 15l4-5 3 2 5-6"/></svg></span></div><div class="stat-value"><strong id="completionRate">68<span class="value-percent">%</span></strong><span class="stat-trend">do seu ritmo</span></div><div class="thin-progress"><span id="completionBar"></span></div></article>
+          <article class="stat-card"><div class="stat-top"><span>Prazo mais próximo</span><span class="stat-icon icon-orange"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span></div><div class="deadline-value"><strong id="deadlineValue">Hoje</strong><span id="deadlineTitle">Revisar prioridades</span></div><div class="stat-note"><span class="deadline-dot"></span> Continue no seu ritmo.</div></article>
+        </section>
+
+        <div class="content-grid"><section class="tasks-panel panel"><div class="panel-heading"><div><span class="section-kicker">SEU ESPAÇO DE AÇÃO</span><h2 id="taskSectionTitle">Minhas tarefas <span id="taskTotal">04</span></h2></div><button class="subtle-button" id="viewAllButton">Ver todas <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></button></div>
+          <div class="task-filters" role="group" aria-label="Filtrar tarefas"><button class="filter-chip active" data-filter="all">Todas <span id="allFilterCount">4</span></button><button class="filter-chip" data-filter="inProgress">Em andamento</button><button class="filter-chip" data-filter="pending">Pendentes</button></div>
+          <div class="task-list" id="taskList"></div>
+          <button class="add-task-inline" id="addTaskInline"><span>+</span> Adicionar outra tarefa</button>
+        </section>
+        <aside class="right-column"><section class="panel focus-panel"><div class="panel-heading compact"><div><span class="section-kicker">VISÃO DA SEMANA</span><h2>Seu progresso</h2></div><button class="tiny-icon" id="progressInfo" aria-label="Sobre o progresso">ⓘ</button></div><div class="progress-ring-wrap"><div class="progress-ring" id="progressRing"><div class="ring-center"><strong id="ringPercent">68<span>%</span></strong><small>CONCLUÍDO</small></div></div></div><div class="progress-caption"><span class="legend-dot violet"></span><span>Concluídas</span><strong id="ringDone">8</strong><span class="legend-dot muted"></span><span>Restantes</span><strong id="ringRemaining">4</strong></div><div class="focus-message"><span>✦</span><p><strong>Você está construindo ritmo.</strong><br />Consistência vale mais do que pressa.</p></div></section>
+          <section class="quote-card"><div class="quote-mark">“</div><p>Você não precisa resolver tudo hoje. Só precisa começar.</p><span>LEMBRETE DO DIA <i>✳</i></span><div class="quote-decoration"></div></section></aside></div>
+        <footer class="dashboard-footer"><span>FEITO PARA IR MAIS LONGE <b>✳</b></span><span>TODA JORNADA COMEÇA COM UM PASSO.</span></footer>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="task-dialog" id="taskDialog" aria-labelledby="dialogTitle"><form id="taskForm" method="dialog"><div class="dialog-top"><div><span class="section-kicker">TIRE DO PAPEL</span><h2 id="dialogTitle">Nova tarefa<span>.</span></h2></div><button class="icon-button dialog-close" id="closeDialog" type="button" aria-label="Fechar">×</button></div><label for="taskTitleInput">Qual é a próxima ação?</label><input class="dialog-input" id="taskTitleInput" maxlength="90" placeholder="Ex.: Finalizar o projeto de IoT" required /><label for="taskCategoryInput">Espaço</label><select class="dialog-input" id="taskCategoryInput"><option>Pessoal</option><option>Estudos</option><option>Projetos</option></select><label for="taskPriorityInput">Prioridade</label><select class="dialog-input" id="taskPriorityInput"><option value="medium">Média</option><option value="high">Alta</option><option value="low">Baixa</option></select><div class="dialog-actions"><button type="button" class="button button-ghost" id="cancelTask">Cancelar</button><button type="submit" class="button button-primary">Adicionar tarefa <span>↗</span></button></div></form></dialog>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

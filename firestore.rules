@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function validTask(data) {
+      return data.keys().hasOnly([
+          'title', 'category', 'priority', 'status', 'completed',
+          'date', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasAll([
+          'title', 'category', 'priority', 'status', 'completed',
+          'date', 'createdAt', 'updatedAt'
+        ])
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 90
+        && data.category in ['Pessoal', 'Estudos', 'Projetos']
+        && data.priority in ['low', 'medium', 'high']
+        && data.status in ['pending', 'inProgress', 'completed']
+        && data.completed is bool
+        && data.date is string
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId}/tasks/{taskId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && validTask(request.resource.data);
+      allow update: if isOwner(userId)
+                    && validTask(request.resource.data)
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+    }
+  }
+}
