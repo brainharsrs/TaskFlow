@@ -36,7 +36,7 @@ export const PRO_FREE_BETA = true;
  * t.me/<nome>. O TOKEN do bot é secreto e fica só no servidor (bot/.env). Veja docs/TELEGRAM.md.
  * Enquanto estiver vazio, a tela "Telegram" avisa que o assistente está em configuração.
  */
-export const TELEGRAM_BOT_USERNAME = '';
+export const TELEGRAM_BOT_USERNAME = 'taskflow12345_bot';
 
 /** Recursos de cada plano, na ordem em que aparecem na página de planos. */
 export const PLAN_FEATURES = {
