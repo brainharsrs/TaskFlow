@@ -59,6 +59,10 @@ Cada pessoa só acessa `users/{seu uid}/tasks`. As regras validam campos, tipos,
 
 HTML, CSS e JavaScript (módulos ES nativos) · Firebase Authentication · Cloud Firestore · Firebase Hosting.
 
+## Assistente no Telegram (beta)
+
+Crie tarefas mandando uma mensagem ao bot do TaskFlow e receba a lista do dia às 7h. Configuração em [docs/TELEGRAM.md](docs/TELEGRAM.md).
+
 ## Autor
 
 Bryan Gabriel Botelho de Oliveira.

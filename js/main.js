@@ -138,7 +138,7 @@ function startSession(session, user, uid, nextRepo, nextAccount) {
   setNotifierScope(uid ?? 'demo');
   let summarized = false;
   let knownPlan = null;
-  store.set({ session, user, uid, plan: 'free', spaces: DEFAULT_SPACES, promo: null, tasks: [], tasksReady: false, view: 'today', space: null, query: '', hiddenIds: new Set() });
+  store.set({ session, user, uid, plan: 'free', telegram: { linked: false }, spaces: DEFAULT_SPACES, promo: null, tasks: [], tasksReady: false, view: 'today', space: null, query: '', hiddenIds: new Set() });
 
   stopAccount = account.watch({
     onPlan: (plan, { confirmed = false } = {}) => {
@@ -151,7 +151,13 @@ function startSession(session, user, uid, nextRepo, nextAccount) {
       store.set({ plan });
     },
     onSpaces: spaces => store.set({ spaces }),
-    onPromo: promo => store.set({ promo })
+    onPromo: promo => store.set({ promo }),
+    onTelegram: telegram => {
+      if (telegram.linked && store.get().telegram?.linked === false && store.get().telegramPending) {
+        showToast('Telegram conectado. Mande uma mensagem ao bot para criar uma tarefa.', { tone: 'success', duration: 6000 });
+      }
+      store.set({ telegram, telegramPending: telegram.linked ? false : store.get().telegramPending });
+    }
   });
 
   stopWatching = repo.watch(
@@ -228,6 +234,20 @@ initAppView({
   onDeleteSpace: space => {
     run(() => account.deleteSpace(space.id));
     showToast(`Espaço ${space.name} excluído`);
+  },
+  // Assistente do Telegram: o código é gravado no Firestore e conferido pelo bot (docs/TELEGRAM.md).
+  onTelegramCode: async () => {
+    const result = await account.createTelegramCode();
+    store.set({ telegramPending: true });
+    return result;
+  },
+  onTelegramUnlink: async () => {
+    try {
+      await account.unlinkTelegram();
+      showToast('Telegram desvinculado');
+    } catch (error) {
+      fail(error);
+    }
   }
 });
 

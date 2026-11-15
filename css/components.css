@@ -365,3 +365,18 @@ a.btn { text-decoration: none; }
   .sheet-wide { width: 100vw; }
   .promo { flex-wrap: wrap; }
 }
+
+/* ---------- Assistente no Telegram ---------- */
+.telegram-body { display: grid; gap: 12px; }
+.telegram-code { display: grid; gap: 10px; }
+.telegram-code-value {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: var(--fs-lg);
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 12px;
+  border-radius: var(--r-md);
+  background: var(--lime-wash);
+  border: 1px solid var(--line);
+  user-select: all;
+}

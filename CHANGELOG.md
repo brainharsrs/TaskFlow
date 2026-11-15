@@ -1,6 +1,26 @@
 # Registro de alterações
 
-## 2.2.0 — 15/11/2026 (não publicado)
+## 2.3.0 — 15/11/2026 (não publicado)
+
+### Requer ação sua
+- Criar o bot no @BotFather, gerar a chave de serviço e ligar o bot no seu computador — [docs/TELEGRAM.md](docs/TELEGRAM.md).
+- Preencher `TELEGRAM_BOT_USERNAME` em `js/config.js`.
+- Publicar as regras do Firestore (agora versão 4) e o site.
+
+### Assistente no Telegram (beta)
+- Mensagem ao bot vira tarefa, com prazo, horário, espaço e prioridade ("prova de história sexta 14h #estudos !alta"). Reaproveita os atalhos da adição rápida (`@amanhã`, `#espaço`, `!alta`) e entende datas e horários escritos naturalmente.
+- Lista do dia às 7h e lembretes no horário de cada tarefa.
+- Vínculo por código de uso único gerado no app (menu da conta → Telegram), válido por 10 minutos. O `chatId` é gravado só pelo servidor.
+- Bot em `bot/` (Node, long polling): roda no computador, sem servidor web. Inclui simulação no terminal (`npm run simulate`).
+
+### Plano Pro
+- **Pro grátis durante o beta** para todas as contas (`PRO_FREE_BETA` no app, no bot e nas regras).
+
+### Regras do Firestore (versão 4)
+- `telegramLinkCodes/{código}`: criação só pelo dono, com formato fixo; ninguém lista.
+- `users/{uid}`: o dono pode apenas remover o campo `telegram` (desvincular).
+
+## 2.2.0 — 15/11/2026 (publicado em taskflow-br.web.app)
 
 ### Requer ação sua
 - Ativar **Google** e **Link do e-mail (login sem senha)** em Authentication → Método de login — [docs/LOGIN.md](docs/LOGIN.md). Até lá, os botões mostram o aviso de método não ativado.

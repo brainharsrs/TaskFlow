@@ -15,7 +15,8 @@
       "package.json",
       "package-lock.json",
       "docs/**",
-      "tests/**"
+      "tests/**",
+      "bot/**"
     ],
     "headers": [
       {

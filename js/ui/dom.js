@@ -26,6 +26,7 @@ export function h(tag, props = {}, ...children) {
 const svg = paths => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
 
 export const ICONS = {
+  send: svg('<path d="M20.5 3.5 3.5 10.6l6.6 2.6 2.6 6.6z"/><path d="m10.1 13.2 4.6-4.6"/>'),
   check: svg('<path d="m5 12.5 4.5 4.5L19 7"/>'),
   plus: svg('<path d="M12 5v14M5 12h14"/>'),
   today: svg('<rect x="3.5" y="5" width="17" height="15.5" rx="3.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/><circle cx="12" cy="15" r="1.4" fill="currentColor" stroke="none"/>'),

@@ -25,6 +25,19 @@ export const AUTH_METHODS = {
   emailLink: true
 };
 
+/**
+ * Beta: o Pro fica liberado para todas as contas, sem pagamento. A mesma chave existe em
+ * firestore.rules (função betaProFree) e em bot/src/bot.js — mude as três juntas ao encerrar o beta.
+ */
+export const PRO_FREE_BETA = true;
+
+/**
+ * Nome de usuário do bot do Telegram, sem "@" (ex.: 'TaskFlowBetaBot'). Público: aparece no link
+ * t.me/<nome>. O TOKEN do bot é secreto e fica só no servidor (bot/.env). Veja docs/TELEGRAM.md.
+ * Enquanto estiver vazio, a tela "Telegram" avisa que o assistente está em configuração.
+ */
+export const TELEGRAM_BOT_USERNAME = '';
+
 /** Recursos de cada plano, na ordem em que aparecem na página de planos. */
 export const PLAN_FEATURES = {
   free: [
@@ -36,6 +49,7 @@ export const PLAN_FEATURES = {
   ],
   pro: [
     'Tudo do plano gratuito',
+    'Assistente no Telegram: crie tarefas por mensagem e receba a lista do dia (beta)',
     'Espaços personalizados, com nome e cor',
     'Lembretes com horário por tarefa',
     'Tarefas recorrentes: diárias, semanais e mensais',

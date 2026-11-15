@@ -1,7 +1,7 @@
 // TaskFlow — diálogos da conta: planos e pagamento, notificações e novo espaço.
 import { h, ICONS } from './dom.js';
 import { showToast } from './toast.js';
-import { PRO_PRICE, PRO_PERIOD, STRIPE_PAYMENT_LINK, PLAN_FEATURES } from '../config.js';
+import { PRO_PRICE, PRO_PERIOD, STRIPE_PAYMENT_LINK, PLAN_FEATURES, PRO_FREE_BETA, TELEGRAM_BOT_USERNAME } from '../config.js';
 import { SPACE_COLORS, SPACE_NAME_MAX } from '../core/domain.js';
 import {
   notificationPermission, notificationsEnabled, enableNotifications, disableNotifications, notifySystem
@@ -54,6 +54,9 @@ export function openPlans({ state, reason = null, onCreateAccount }) {
   if (isDemo) {
     action = h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => { dialog.close(); onCreateAccount(); } }, 'Criar conta para assinar');
     note = 'Na demonstração os recursos Pro já estão liberados para você experimentar.';
+  } else if (PRO_FREE_BETA) {
+    action = h('button', { class: 'btn btn-block', type: 'button', disabled: true }, 'Pro grátis durante o beta');
+    note = 'Durante o beta, todos os recursos Pro — inclusive o assistente no Telegram — estão liberados para todas as contas. Nenhuma cobrança é feita.';
   } else if (isPro) {
     action = h('button', { class: 'btn btn-block', type: 'button', disabled: true }, 'Este é o seu plano');
     note = 'Para alterar a forma de pagamento ou cancelar, use o link enviado pela Stripe no e-mail de confirmação da assinatura.';
@@ -136,6 +139,70 @@ export function openNotificationPrefs({ isPro, onChange }) {
     ]
   });
   sync();
+}
+
+// ---------- Assistente no Telegram ----------
+
+/**
+ * state: estado atual (session, telegram). `subscribe(fn)` avisa mudanças do store, para a janela
+ * mostrar "Conectado" assim que o bot confirmar o código.
+ */
+export function openTelegram({ state, subscribe, onCreateCode, onUnlink, onCreateAccount }) {
+  const body = h('div', { class: 'telegram-body' });
+  const intro = h('p', { class: 'plan-reason' },
+    'Crie tarefas mandando uma mensagem — ', h('i', {}, '"prova de história sexta 14h #estudos !alta"'),
+    ' — e receba a lista do dia às 7h e os lembretes no horário de cada tarefa.');
+  const betaNote = h('p', { class: 'plan-note' }, 'Pro grátis durante o beta.');
+  let codeView = null;
+
+  const render = current => {
+    body.replaceChildren();
+    if (current.session === 'demo') {
+      body.append(h('p', {}, 'O assistente precisa de uma conta para saber onde guardar suas tarefas.'),
+        h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => { dialog.close(); onCreateAccount(); } }, 'Criar conta'));
+      return;
+    }
+    if (!TELEGRAM_BOT_USERNAME) {
+      body.append(h('p', { class: 'pref-status' }, 'O assistente está em configuração e ainda não foi ligado. Volte em breve.'));
+      return;
+    }
+    if (current.telegram?.linked) {
+      body.append(
+        h('div', { class: 'pref-row' },
+          h('div', {}, h('strong', {}, 'Conectado ✅'),
+            h('p', {}, current.telegram.username ? `Conta do Telegram: @${current.telegram.username}` : 'Seu Telegram está ligado a esta conta.')),
+          h('a', { class: 'btn btn-small', href: `https://t.me/${TELEGRAM_BOT_USERNAME}`, target: '_blank', rel: 'noopener noreferrer' }, 'Abrir o bot')),
+        h('button', { class: 'btn btn-quiet btn-block', type: 'button', onclick: async () => { await onUnlink(); } }, 'Desvincular o Telegram'));
+      return;
+    }
+    if (codeView) { body.append(codeView); return; }
+    const generate = h('button', { class: 'btn btn-primary btn-block', type: 'button' }, 'Gerar código');
+    const error = h('div', { class: 'field-error', 'aria-live': 'polite' }, h('span', {}));
+    generate.addEventListener('click', async () => {
+      generate.disabled = true;
+      try {
+        const { code } = await onCreateCode();
+        const link = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${code}`;
+        codeView = h('div', { class: 'telegram-code' },
+          h('p', {}, 'Toque no botão para abrir o bot, ou mande para ', h('b', {}, `@${TELEGRAM_BOT_USERNAME}`), ':'),
+          h('p', { class: 'telegram-code-value', 'aria-label': `Código ${code.split('').join(' ')}` }, `/start ${code}`),
+          h('a', { class: 'btn btn-primary btn-block', href: link, target: '_blank', rel: 'noopener noreferrer' }, 'Abrir no Telegram'),
+          h('p', { class: 'plan-note' }, 'O código vale 10 minutos e só pode ser usado uma vez. Esta janela muda para "Conectado" quando o bot confirmar.'));
+        render(current);
+      } catch {
+        generate.disabled = false;
+        error.firstElementChild.textContent = 'Não foi possível gerar o código. Confira a conexão e tente de novo.';
+        error.classList.add('is-shown');
+      }
+    });
+    body.append(generate, error);
+  };
+
+  const dialog = openDialog({ title: 'Assistente no Telegram', body: [intro, body, betaNote] });
+  render(state);
+  const stop = subscribe(next => { if (dialog.open) render(next); });
+  dialog.addEventListener('close', stop);
+  return dialog;
 }
 
 // ---------- Novo espaço ----------

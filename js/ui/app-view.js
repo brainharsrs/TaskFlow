@@ -3,7 +3,8 @@ import { byId, $, $$, h, ICONS, initialOf } from './dom.js';
 import { movePill, countTo, spring } from './motion.js';
 import { renderTaskList } from './task-list.js';
 import { renderReport } from './report.js';
-import { openPlans, openNotificationPrefs, openNewSpace } from './account-ui.js';
+import { openPlans, openNotificationPrefs, openNewSpace, openTelegram } from './account-ui.js';
+import { PRO_FREE_BETA } from '../config.js';
 import { showToast } from './toast.js';
 import { store } from '../core/store.js';
 import { getEvents, unreadEvents, markEventsRead } from '../services/notifier.js';
@@ -196,6 +197,10 @@ export function initAppView(handlers) {
   byId('renameButton').addEventListener('click', openRenameDialog);
   byId('plansButton').addEventListener('click', () => { closeMenu(); openPlans({ state: store.get(), onCreateAccount: callbacks.onLeaveDemo }); });
   byId('reportButton').addEventListener('click', () => { closeMenu(); setView('report'); });
+  byId('telegramButton').addEventListener('click', () => {
+    closeMenu();
+    openTelegram({ state: store.get(), subscribe: store.subscribe, onCreateCode: callbacks.onTelegramCode, onUnlink: callbacks.onTelegramUnlink, onCreateAccount: callbacks.onLeaveDemo });
+  });
   const openPrefs = () => openNotificationPrefs({ isPro: store.get().plan === 'pro', onChange: () => store.set({}) });
   byId('prefsButton').addEventListener('click', () => { closeMenu(); openPrefs(); });
   byId('alertsPrefs').addEventListener('click', () => { byId('alertsPanel').hidePopover(); openPrefs(); });
@@ -293,7 +298,7 @@ function renderUser(state) {
   for (const element of $$('[data-avatar]')) element.textContent = initialOf(name);
   // O selo "Pro" marca recursos pagos para quem está no plano gratuito.
   for (const element of $$('[data-pro-tag]')) element.hidden = isPro;
-  byId('planTag').textContent = state.session === 'demo' ? 'Demonstração' : isPro ? 'Pro' : 'Gratuito';
+  byId('planTag').textContent = state.session === 'demo' ? 'Demonstração' : isPro ? (PRO_FREE_BETA ? 'Pro · beta' : 'Pro') : 'Gratuito';
   byId('demoBanner').hidden = state.session !== 'demo';
   byId('renameButton').hidden = state.session !== 'cloud';
   byId('logoutLabel').textContent = state.session === 'demo' ? 'Sair da demonstração' : 'Sair da conta';
