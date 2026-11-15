@@ -92,6 +92,34 @@ export function spokenToShortcuts(text, spaceNames = SPACES) {
   return out.replace(/\s+,/g, ',').replace(/\s+/g, ' ').trim();
 }
 
+// ---------- Tempo relativo: "em 5 minutos", "daqui a 2 horas", "em meia hora", "em 3 dias" ----------
+const AMOUNT_WORDS = { ...NUMBER_WORDS, meia: 0.5, quinze: 15, vinte: 20, trinta: 30, quarenta: 40, cinquenta: 50 };
+const RELATIVE = new RegExp(
+  '(?<![\\p{L}\\d])(?:em|daqui\\s+a|daqui|dentro\\s+de)\\s+(\\d{1,3}|uma?|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|quinze|vinte|trinta|quarenta|cinquenta|meia)\\s+(minutos?|mins?|horas?|h|dias?|semanas?)(?![\\p{L}\\d])', 'iu');
+const UNIT_MINUTES = { min: 1, minuto: 1, hora: 60, h: 60 };
+
+/**
+ * Lê UMA expressão de tempo relativo e devolve { text (sem a expressão), dueDate, reminderTime }.
+ * Minutos e horas viram data + horário de lembrete; dias e semanas viram só a data.
+ */
+export function parseRelative(text, now) {
+  const match = RELATIVE.exec(text);
+  if (!match) return null;
+  const amount = /^\d+$/.test(match[1]) ? Number(match[1]) : AMOUNT_WORDS[normalizeText(match[1])];
+  const unit = normalizeText(match[2]).replace(/s$/, '');
+  if (!amount) return null;
+  const rest = `${text.slice(0, match.index)} ${text.slice(match.index + match[0].length)}`.replace(/\s+/g, ' ').trim();
+  if (unit === 'dia' || unit === 'semana') {
+    const days = Math.round(amount * (unit === 'semana' ? 7 : 1));
+    if (days < 1 || days > 366) return null;
+    return { text: rest, dueDate: addDays(toISODate(now), days), reminderTime: null };
+  }
+  const minutes = Math.round(amount * UNIT_MINUTES[unit]);
+  if (minutes < 1 || minutes > 7 * 24 * 60) return null;
+  const at = new Date(now.getTime() + minutes * 60_000);
+  return { text: rest, dueDate: toISODate(at), reminderTime: `${pad(at.getHours())}:${pad(at.getMinutes())}` };
+}
+
 /**
  * Interpreta a mensagem. `now` define "hoje" e a hora atual; `spaceNames` são os espaços da conta.
  * Devolve { title, dueDate, reminderTime, category, priority } — campos não informados ficam null.
@@ -104,9 +132,14 @@ export function parseTaskMessage(text, { now = new Date(), spaceNames = SPACES }
   const quick = parseQuickAdd(raw, today, spaceNames);
   let dueDate = quick.dueDate ?? null;
   let reminderTime = null;
+  let title = quick.title;
 
-  // 2) Leitura natural sobre o que sobrou do título.
-  const words = quick.title ? quick.title.split(' ') : [];
+  // 2) Tempo relativo ("em 5 minutos"), só se a data não veio por atalho.
+  const relative = dueDate === null ? parseRelative(title, now) : null;
+  if (relative) ({ text: title, dueDate, reminderTime } = relative);
+
+  // 3) Leitura natural sobre o que sobrou do título.
+  const words = title ? title.split(' ') : [];
   const kept = [];
   for (let i = 0; i < words.length; i++) {
     const word = stripPunctuation(words[i]);

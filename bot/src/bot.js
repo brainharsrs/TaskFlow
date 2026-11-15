@@ -27,7 +27,7 @@ const HELP = [
   '• entregar trabalho 25/11 #projetos',
   '• ou mande um ÁUDIO: "prova de história sexta às duas da tarde, no espaço estudos"',
   '',
-  'Atalhos: data (hoje, amanhã, sexta, 25/11 ou @sex), horário (14h, 9:30), #espaço e !alta / !media / !baixa.',
+  'Atalhos: data (hoje, amanhã, sexta, 25/11 ou @sex), horário (14h, 9:30), tempo (em 30 minutos, daqui a 2 horas, em 3 dias), #espaço e !alta / !media / !baixa.',
   '',
   'Comandos:',
   '/hoje — tarefas de hoje e atrasadas',

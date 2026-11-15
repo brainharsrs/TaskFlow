@@ -308,3 +308,38 @@ test('bot: falha ou silêncio na transcrição não cria tarefa', async () => {
   assert.match(sent.at(-1), /Não consegui ouvir/);
   assert.equal(store.tasksOf('ana').length, 0);
 });
+
+// ---------- Tempo relativo ----------
+test('relativo: "em 5 minutos" vira lembrete hoje, 5 min à frente', () => {
+  const now = new Date(2026, 10, 15, 16, 57);
+  assert.deepEqual(parseTaskMessage('PUBLICAR TASKFLOW EM 5 MINUTOS', { now }), {
+    title: 'PUBLICAR TASKFLOW', dueDate: '2026-11-15', reminderTime: '17:02', category: null, priority: null
+  });
+});
+
+test('relativo: horas, meia hora e virada do dia', () => {
+  const now = new Date(2026, 10, 15, 23, 40);
+  assert.deepEqual(parseTaskMessage('ligar pra vó daqui a 2 horas', { now }).reminderTime, '01:40');
+  assert.equal(parseTaskMessage('ligar pra vó daqui a 2 horas', { now }).dueDate, '2026-11-16');
+  assert.equal(parseTaskMessage('tomar remédio em meia hora', { now }).reminderTime, '00:10');
+});
+
+test('relativo: dias e semanas viram só data', () => {
+  const parsed = parseTaskMessage('revisar em 3 dias #estudos', { now: NOW });
+  assert.equal(parsed.dueDate, '2026-11-18');
+  assert.equal(parsed.reminderTime, null);
+  assert.equal(parsed.category, 'Estudos');
+  assert.equal(parseTaskMessage('pagar conta daqui uma semana', { now: NOW }).dueDate, '2026-11-22');
+});
+
+test('relativo: "em" com número que não é tempo fica no título; atalho @ tem prioridade', () => {
+  assert.equal(parseTaskMessage('estudar em 2 matérias', { now: NOW }).title, 'estudar em 2 matérias');
+  assert.equal(parseTaskMessage('prova @amanhã em 3 dias', { now: NOW }).dueDate, '2026-11-16');
+});
+
+test('relativo: funciona em áudio ("daqui a dez minutos")', () => {
+  const now = new Date(2026, 10, 15, 16, 57);
+  const parsed = parseTaskMessage(spokenToShortcuts('Lembrar de beber água daqui a dez minutos.'), { now });
+  assert.equal(parsed.title, 'Lembrar de beber água');
+  assert.equal(parsed.reminderTime, '17:07');
+});
