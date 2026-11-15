@@ -8,7 +8,9 @@ services:
     region: oregon
     branch: main
     # O bot importa js/core (compartilhado com o app), então o build parte da raiz do repositório.
-    buildCommand: cd bot && npm ci --omit=optional
+    # npm ci normal: --omit=optional removeria o @google-cloud/firestore (opcional no firebase-admin).
+    # O Whisper é instalado, mas com AUDIO=off nunca é carregado (não ocupa memória).
+    buildCommand: cd bot && npm ci
     startCommand: node bot/src/index.js
     healthCheckPath: /health
     autoDeploy: true
