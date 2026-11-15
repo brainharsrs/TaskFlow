@@ -67,3 +67,14 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+.taste-skill/
+
+# Ferramentas locais (logs de sessão podem conter dados privados)
+.claude/
+.claude-flow/
+
+# Segredos locais
+.env.*
+*.secret
+service-account*.json
