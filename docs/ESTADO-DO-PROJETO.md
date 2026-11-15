@@ -25,4 +25,5 @@ Registro do que foi feito até 15/11/2026, para retomar o trabalho depois.
 2. Telegram: criar o bot no @BotFather, gerar a chave de serviço, preencher `bot/.env` e `TELEGRAM_BOT_USERNAME` (passo a passo em `docs/TELEGRAM.md`).
 3. Publicar as regras do Firestore v4 e o site (só quando decidir).
 4. Testar login e regras do Firestore de ponta a ponta.
-5. Depois do beta: hospedagem definitiva do bot e WhatsApp (API oficial da Meta). Áudio virando tarefa já funciona (2.4.0), com Whisper rodando no computador do bot.
+5. Hospedagem grátis no Render pronta para configurar (docs/RENDER.md); áudio só no modo PC.
+6. Depois do beta: hospedagem definitiva do bot e WhatsApp (API oficial da Meta). Áudio virando tarefa já funciona (2.4.0), com Whisper rodando no computador do bot.

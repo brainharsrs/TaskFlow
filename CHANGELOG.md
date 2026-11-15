@@ -1,5 +1,13 @@
 # Registro de alterações
 
+## 2.5.0 — 15/11/2026
+
+### Assistente no Telegram
+- **Hospedagem grátis no Render (24 h)**: modo webhook com segredo no cabeçalho, ping que mantém o serviço acordado e Blueprint pronto (`render.yaml`). Guia em [docs/RENDER.md](docs/RENDER.md).
+- O mesmo código roda no PC (long polling, com áudio) e no Render (webhook, sem áudio por limite de memória).
+- Conta de serviço pode vir de variável de ambiente (JSON ou base64).
+- Whisper virou dependência opcional; 6 testes novos (57 no total).
+
 ## 2.4.0 — 15/11/2026
 
 ### Assistente no Telegram

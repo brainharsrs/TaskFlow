@@ -13,8 +13,20 @@ import { readFileSync } from 'node:fs';
 import { normalizeTask, DEFAULT_SPACES } from '../../js/core/domain.js';
 import { checkLinkCode } from '../../js/core/telegram-link.js';
 
-export function createFirestoreStore({ serviceAccountFile }) {
-  const credentials = JSON.parse(readFileSync(serviceAccountFile, 'utf8'));
+/**
+ * Lê a conta de serviço de um ARQUIVO (no PC) ou do CONTEÚDO de uma variável de ambiente (no Render),
+ * em JSON puro ou em base64. Nunca registra o conteúdo em log.
+ */
+export function loadServiceAccount({ file, json } = {}) {
+  if (json) {
+    const text = json.trim().startsWith('{') ? json : Buffer.from(json, 'base64').toString('utf8');
+    return JSON.parse(text);
+  }
+  if (file) return JSON.parse(readFileSync(file, 'utf8'));
+  throw new Error('faltou FIREBASE_SERVICE_ACCOUNT_FILE (no PC) ou FIREBASE_SERVICE_ACCOUNT_JSON (no Render)');
+}
+
+export function createFirestoreStore({ credentials }) {
   const app = initializeApp({ credential: cert(credentials) });
   const db = getFirestore(app);
   const userRef = uid => db.collection('users').doc(uid);

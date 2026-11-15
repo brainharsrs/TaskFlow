@@ -1,0 +1,28 @@
+# TaskFlow — assistente do Telegram no Render (plano gratuito). Guia: docs/RENDER.md
+# Os valores secretos (sync: false) são colados por você no painel do Render, NUNCA aqui.
+services:
+  - type: web
+    name: taskflow-bot
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    # O bot importa js/core (compartilhado com o app), então o build parte da raiz do repositório.
+    buildCommand: cd bot && npm ci --omit=optional
+    startCommand: node bot/src/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TZ
+        value: America/Sao_Paulo
+      - key: SUMMARY_HOUR
+        value: "7"
+      # 512 MB não comportam o Whisper (precisa de mais de 1 GB): áudio desligado na hospedagem.
+      - key: AUDIO
+        value: "off"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false

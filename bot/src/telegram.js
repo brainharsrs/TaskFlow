@@ -22,6 +22,8 @@ export function createTelegram(token) {
     getMe: () => call('getMe'),
     /** Long polling: o Telegram segura a conexão até 30 s esperando mensagens novas. */
     getUpdates: offset => call('getUpdates', { offset, timeout: 30, allowed_updates: ['message'] }),
+    /** Modo hospedagem: o Telegram passa a ENTREGAR as mensagens neste endereço, com o segredo no cabeçalho. */
+    setWebhook: (url, secret) => call('setWebhook', { url, secret_token: secret, allowed_updates: ['message'], max_connections: 10 }),
     /** Garante que não há webhook antigo, senão o getUpdates é recusado. */
     deleteWebhook: () => call('deleteWebhook', { drop_pending_updates: false }),
     setCommands: () => call('setMyCommands', {

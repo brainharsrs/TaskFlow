@@ -40,6 +40,9 @@ telegramLinkCodes/K7MP2QXR  ───────▶  /start K7MP2QXR  ◀──
 
 ## Onde o bot roda
 
+> **Novo:** guia para deixar o bot 24 h no ar de graça no Render em [docs/RENDER.md](RENDER.md) (sem áudio lá).
+
+
 Escolha atual: **no seu computador** (ambiente de teste do beta). Ele só funciona enquanto o PC estiver ligado e o programa aberto. Se o PC ligar depois das 7h, o resumo sai na hora em que o bot liga (até o meio-dia). Lembretes com mais de 1 hora de atraso são descartados.
 
 Opções para depois, quando houver uso real:

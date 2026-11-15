@@ -13,7 +13,9 @@
     "modelo": "node src/download-model.js"
   },
   "dependencies": {
-    "@huggingface/transformers": "^4.3.2",
     "firebase-admin": "^13.0.0"
+  },
+  "optionalDependencies": {
+    "@huggingface/transformers": "^4.3.2"
   }
 }
