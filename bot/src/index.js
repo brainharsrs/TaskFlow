@@ -18,15 +18,30 @@ if (!env.FIREBASE_SERVICE_ACCOUNT_FILE) {
   process.exit(1);
 }
 
+const { createTranscriber, DEFAULT_MODEL } = await import('./transcribe.js');
+
 const telegram = createTelegram(env.TELEGRAM_BOT_TOKEN);
 const store = createFirestoreStore({ serviceAccountFile: env.FIREBASE_SERVICE_ACCOUNT_FILE });
 const log = (message, extra) => console.log(new Date().toLocaleString('pt-BR'), '·', message, extra ? JSON.stringify(extra) : '');
-const bot = createBot({ store, send: (chatId, text) => telegram.sendMessage(chatId, text), log });
+
+// Áudios: transcritos neste computador com Whisper. AUDIO=off no .env desliga.
+const audioOn = env.AUDIO !== 'off';
+const transcriber = audioOn ? createTranscriber({ model: env.WHISPER_MODEL || DEFAULT_MODEL, log }) : null;
+const transcribe = transcriber && (async fileId => {
+  const started = Date.now();
+  const text = await transcriber.transcribe(await telegram.downloadFile(fileId));
+  log(`áudio transcrito em ${((Date.now() - started) / 1000).toFixed(1)} s`);
+  return text;
+});
+
+const bot = createBot({ store, send: (chatId, text) => telegram.sendMessage(chatId, text), log, transcribe });
 
 const me = await telegram.getMe();
 await telegram.deleteWebhook();
 await telegram.setCommands().catch(() => {});
 log(`bot @${me.username} ligado no projeto ${store.projectId}. Ctrl+C para parar.`);
+// Carrega o modelo de voz em segundo plano, para o primeiro áudio não demorar.
+transcriber?.warmUp().catch(error => log(`modelo de voz indisponível (${error.message}); áudios serão tentados de novo depois`));
 
 // ---------- Agendador: lembretes e resumo diário ----------
 let ticking = false;
@@ -58,6 +73,7 @@ while (running) {
       offset = update.update_id + 1;
       const message = toBotMessage(update);
       if (!message) continue;
+      if (message.audio) await telegram.sendTyping(message.chatId).catch(() => {});
       await bot.handleMessage(message).catch(error => {
         log(`erro ao tratar mensagem: ${error.message}`);
         return telegram.sendMessage(message.chatId, 'Tive um problema para salvar isso. Tente de novo em instantes.').catch(() => {});

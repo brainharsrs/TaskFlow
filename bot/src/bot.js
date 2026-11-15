@@ -7,7 +7,7 @@ import {
 
 const PRIORITY_WEIGHT_ORDER = { high: 0, medium: 1, low: 2 };
 import { normalizeLinkCode } from '../../js/core/telegram-link.js';
-import { parseTaskMessage } from './parse-message.js';
+import { parseTaskMessage, spokenToShortcuts } from './parse-message.js';
 
 /** Durante o beta o Pro é grátis para todos. Mesma chave de js/config.js e firestore.rules. */
 export const PRO_FREE_BETA = true;
@@ -15,6 +15,8 @@ export const isPro = user => PRO_FREE_BETA || user?.plan === 'pro';
 
 const LINK_ATTEMPTS = 5;
 const LINK_WINDOW_MS = 15 * 60 * 1000;
+/** Áudios maiores que isso são recusados (a transcrição roda no computador). */
+export const AUDIO_MAX_SECONDS = 120;
 /** Lembrete com mais de 60 min de atraso (bot estava desligado) é descartado em silêncio. */
 const REMINDER_GRACE_MIN = 60;
 
@@ -23,6 +25,7 @@ const HELP = [
   '• prova de história sexta 14h #estudos !alta',
   '• comprar pão amanhã',
   '• entregar trabalho 25/11 #projetos',
+  '• ou mande um ÁUDIO: "prova de história sexta às duas da tarde, no espaço estudos"',
   '',
   'Atalhos: data (hoje, amanhã, sexta, 25/11 ou @sex), horário (14h, 9:30), #espaço e !alta / !media / !baixa.',
   '',
@@ -79,7 +82,10 @@ export function dailySummaryText(tasks, now, { force = false } = {}) {
  *   send(chatId, text): envia a resposta
  *   clock(): Date atual (injetável nos testes)
  */
-export function createBot({ store, send, clock = () => new Date(), log = () => {} }) {
+/**
+ * transcribe(fileId) → Promise<string>: baixa e transcreve um áudio (opcional; sem ele, áudios são recusados).
+ */
+export function createBot({ store, send, clock = () => new Date(), log = () => {}, transcribe = null }) {
   const attempts = new Map(); // chatId → [timestamps] (limite de tentativas de vínculo)
 
   const allowAttempt = (chatId, nowMs) => {
@@ -101,11 +107,11 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
     return send(chatId, `Pronto! Este chat está ligado à sua conta do TaskFlow. ✅\n\n${HELP}`);
   }
 
-  async function createTask(chatId, uid, text) {
+  async function createTask(chatId, uid, text, { spoken = false } = {}) {
     const now = clock();
     const user = await store.getUser(uid);
     const spaceNames = await store.listSpaceNames(uid);
-    const parsed = parseTaskMessage(text, { now, spaceNames });
+    const parsed = parseTaskMessage(spoken ? spokenToShortcuts(text, spaceNames) : text, { now, spaceNames });
     if (!parsed.title) return send(chatId, 'Não entendi o nome da tarefa. Exemplo: "prova de história sexta 14h #estudos".');
     let fields;
     try {
@@ -124,13 +130,31 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
     const today = toISODate(now);
     const when = fields.dueDate ? formatDue(fields.dueDate, today) + (fields.reminderTime ? `, ${fields.reminderTime}` : '') : 'sem prazo';
     const extra = !isPro(user) && parsed.reminderTime ? '\n(Lembrete com horário é do plano Pro.)' : '';
-    return send(chatId, `✅ Tarefa criada: ${fields.title}\n📅 ${when} · ${fields.category} · ${PRIORITY_LABEL[fields.priority]}${extra}`);
+    const heard = spoken ? `🎙️ Entendi: “${text}”\n` : '';
+    return send(chatId, `${heard}✅ Tarefa criada: ${fields.title}\n📅 ${when} · ${fields.category} · ${PRIORITY_LABEL[fields.priority]}${extra}`);
   }
 
-  /** Trata uma mensagem recebida. `message`: { chatId, text, profile: { username?, firstName? } } */
-  async function handleMessage({ chatId, text, profile = {} }) {
+  async function handleAudio(chatId, audio) {
+    const uid = await store.findUidByChat(chatId);
+    if (!uid) return send(chatId, WELCOME_UNLINKED);
+    if (!transcribe) return send(chatId, 'Por enquanto não consigo ouvir áudios. Mande a tarefa por texto.');
+    if (audio.duration > AUDIO_MAX_SECONDS) return send(chatId, `Esse áudio é longo demais. Mande um de até ${AUDIO_MAX_SECONDS / 60} minutos com uma tarefa.`);
+    let heard;
+    try {
+      heard = await transcribe(audio.fileId);
+    } catch (error) {
+      log(`erro ao transcrever: ${error.message}`);
+      return send(chatId, 'Não consegui ouvir esse áudio. Tente de novo ou mande por texto.');
+    }
+    if (!heard) return send(chatId, 'Não ouvi nada nesse áudio. Fale um pouco mais perto do microfone e tente de novo.');
+    return createTask(chatId, uid, heard, { spoken: true });
+  }
+
+  /** Trata uma mensagem recebida. `message`: { chatId, text, audio?: { fileId, duration }, profile } */
+  async function handleMessage({ chatId, text, audio = null, profile = {} }) {
+    if (audio) return handleAudio(chatId, audio);
     const body = String(text ?? '').trim();
-    if (!body) return send(chatId, 'Por enquanto eu só entendo texto. Áudio vem numa próxima versão. 🎙️');
+    if (!body) return send(chatId, 'Eu entendo texto e áudio. Fotos e outros arquivos ainda não. 🙂');
     const [first, ...rest] = body.split(/\s+/);
     const command = first.startsWith('/') ? first.slice(1).split('@')[0].toLowerCase() : null;
     const argument = rest.join(' ');

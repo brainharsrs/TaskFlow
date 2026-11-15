@@ -3,7 +3,7 @@
 process.env.TZ = 'America/Sao_Paulo';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTaskMessage, parseTimeWord, parseDateWord } from '../bot/src/parse-message.js';
+import { parseTaskMessage, parseTimeWord, parseDateWord, spokenToShortcuts } from '../bot/src/parse-message.js';
 import {
   makeLinkCode, normalizeLinkCode, checkLinkCode, LINK_CODE_PATTERN, LINK_CODE_TTL_MS, LINK_CODE_ALPHABET
 } from '../js/core/telegram-link.js';
@@ -231,5 +231,80 @@ test('bot: lembrete chega uma vez no horário; atrasado demais é descartado', a
 test('telegram: só aceita chat privado e normaliza o chatId como texto', () => {
   assert.equal(toBotMessage({ message: { chat: { id: -100, type: 'group' }, text: 'oi' } }), null);
   assert.deepEqual(toBotMessage({ message: { chat: { id: 42, type: 'private' }, text: 'oi', from: { username: 'ana' } } }),
-    { chatId: '42', text: 'oi', profile: { username: 'ana', firstName: null } });
+    { chatId: '42', text: 'oi', audio: null, profile: { username: 'ana', firstName: null } });
+  assert.deepEqual(toBotMessage({ message: { chat: { id: 42, type: 'private' }, voice: { file_id: 'F1', duration: 7 } } }).audio, { fileId: 'F1', duration: 7 });
+});
+
+// ---------- Áudio ----------
+const spoken = (text, options) => parseTaskMessage(spokenToShortcuts(text), { now: NOW, ...options });
+
+test('fala: frase do enunciado dita em voz alta vira a mesma tarefa', () => {
+  assert.deepEqual(spoken('Prova de História sexta-feira às duas da tarde, no espaço Estudos, prioridade alta.'), {
+    title: 'Prova de História', dueDate: '2026-11-20', reminderTime: '14:00', category: 'Estudos', priority: 'high'
+  });
+});
+
+test('fala: horários ditos de vários jeitos', () => {
+  assert.equal(spoken('Comprar pão amanhã às 7h30').reminderTime, '07:30');
+  assert.equal(spoken('Reunião amanhã às dez e meia').reminderTime, '10:30');
+  assert.equal(spoken('Ligar pro João às 9 horas da noite').reminderTime, '21:00');
+  assert.equal(spoken('Treino amanhã às 6 da manhã').reminderTime, '06:00');
+  assert.equal(spoken('Almoço com a vó meio-dia').reminderTime, '12:00');
+  assert.equal(spoken('Remédio amanhã sete e quinze').reminderTime, '07:15');
+});
+
+test('fala: números e "as" comuns não viram horário', () => {
+  assert.deepEqual(spoken('Comprar 2 pães e 3 leites'), { title: 'Comprar 2 pães e 3 leites', dueDate: null, reminderTime: null, category: null, priority: null });
+  const parsed = spoken('Estudar as duas matérias amanhã');
+  assert.equal(parsed.title, 'Estudar as duas matérias');
+  assert.equal(parsed.reminderTime, null);
+});
+
+test('fala: data por extenso e espaço desconhecido fica no título', () => {
+  const parsed = spoken('Reunião dia 25 de novembro');
+  assert.equal(parsed.dueDate, '2026-11-25');
+  assert.equal(parsed.title, 'Reunião');
+  assert.equal(spoken('Arrumar o espaço gourmet').title, 'Arrumar o espaço gourmet');
+});
+
+test('bot: áudio vira tarefa e a resposta mostra o que foi ouvido', async () => {
+  const store = createMemoryStore();
+  const sent = [];
+  const heard = [];
+  const bot = createBot({
+    store, clock: () => NOW, send: async (chatId, text) => { sent.push(text); },
+    transcribe: async fileId => { heard.push(fileId); return 'Prova de história sexta às duas da tarde no espaço estudos'; }
+  });
+  store.addUser('ana');
+  store.addLinkCode('TASK2345', 'ana', NOW.getTime());
+  await bot.handleMessage({ chatId: '77', audio: { fileId: 'F1', duration: 5 } });
+  assert.match(sent.at(-1), /Gerar código/, 'sem vínculo não transcreve');
+  assert.equal(heard.length, 0);
+
+  await bot.handleMessage({ chatId: '77', text: '/start TASK2345' });
+  await bot.handleMessage({ chatId: '77', audio: { fileId: 'F2', duration: 5 } });
+  assert.match(sent.at(-1), /🎙️ Entendi: “Prova de história/);
+  const [task] = store.tasksOf('ana');
+  assert.equal(task.reminderTime, '14:00');
+  assert.equal(task.category, 'Estudos');
+
+  await bot.handleMessage({ chatId: '77', audio: { fileId: 'F3', duration: 600 } });
+  assert.match(sent.at(-1), /longo demais/);
+  assert.deepEqual(heard, ['F2'], 'áudio longo nem é baixado');
+});
+
+test('bot: falha ou silêncio na transcrição não cria tarefa', async () => {
+  const store = createMemoryStore();
+  const sent = [];
+  let answer = async () => '';
+  const bot = createBot({ store, clock: () => NOW, send: async (chatId, text) => { sent.push(text); }, transcribe: id => answer(id) });
+  store.addUser('ana');
+  store.addLinkCode('TASK2345', 'ana', NOW.getTime());
+  await bot.handleMessage({ chatId: '77', text: '/start TASK2345' });
+  await bot.handleMessage({ chatId: '77', audio: { fileId: 'F', duration: 3 } });
+  assert.match(sent.at(-1), /Não ouvi nada/);
+  answer = async () => { throw new Error('ffmpeg falhou'); };
+  await bot.handleMessage({ chatId: '77', audio: { fileId: 'F', duration: 3 } });
+  assert.match(sent.at(-1), /Não consegui ouvir/);
+  assert.equal(store.tasksOf('ana').length, 0);
 });

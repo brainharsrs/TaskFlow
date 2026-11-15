@@ -1,6 +1,12 @@
 # Registro de alterações
 
-## 2.3.0 — 15/11/2026 (não publicado)
+## 2.4.0 — 15/11/2026
+
+### Assistente no Telegram
+- **Áudio vira tarefa**: mensagens de voz são transcritas no computador do bot com Whisper (código aberto, sem conta nem custo) e passam por um tradutor de fala ("às duas da tarde", "dia 25 de novembro", "no espaço estudos", "prioridade alta").
+- Simulação aceita `:audio ARQUIVO`.
+
+## 2.3.0 — 15/11/2026 (publicado)
 
 ### Requer ação sua
 - Criar o bot no @BotFather, gerar a chave de serviço e ligar o bot no seu computador — [docs/TELEGRAM.md](docs/TELEGRAM.md).

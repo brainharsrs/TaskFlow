@@ -49,13 +49,57 @@ export function parseDateWord(word, today) {
   return null;
 }
 
+// ---------- Fala → atalhos (usado só em áudios transcritos) ----------
+const NUMBER_WORDS = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10, onze: 11, doze: 12 };
+const MINUTE_WORDS = { meia: 30, quinze: 15, trinta: 30, vinte: 20, dez: 10, cinco: 5, 'quarenta e cinco': 45, quarenta: 40, cinquenta: 50 };
+const MONTHS = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const HOUR = '(\\d{1,2}|uma?|dois|duas|tr[eê]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze)';
+const MINUTE = '(meia|quinze|trinta|vinte|dez|cinco|quarenta e cinco|quarenta|cinquenta|\\d{1,2})';
+const TIME_SPOKEN = new RegExp(
+  `(?<![\\p{L}\\d])(?:(?:[àa]s)\\s+)?${HOUR}(\\s*(?:horas?|h)(?![\\p{L}\\d]))?(?:\\s+e\\s+${MINUTE}(?:\\s+minutos?)?)?(?:\\s+d[ae]\\s+(manh[ãa]|tarde|noite|madrugada))?(?![\\p{L}\\d])`, 'giu');
+const toNumber = (word, table) => (/^\d+$/.test(word) ? Number(word) : table[normalizeText(word)]);
+
+/**
+ * Converte o jeito de FALAR nos atalhos que o parser entende, sem mexer no resto do texto:
+ *   "às duas da tarde" → "14h"   "sete e meia" → "7h30"   "meio-dia" → "12h"
+ *   "dia 25 de novembro" → "25/11"   "no espaço estudos" → "#Estudos"   "prioridade alta" → "!alta"
+ * Um número solto ("comprar 2 pães") só vira horário com "às", "horas", "e meia" ou "da tarde".
+ */
+export function spokenToShortcuts(text, spaceNames = SPACES) {
+  let out = String(text ?? '').trim().replace(/[.!?…]+$/u, '');
+  out = out.replace(/(?<![\p{L}])(?:(?:[àa]o|[àa]s)\s+)?meio[\s-]dia(?![\p{L}])/giu, ' 12h ');
+  out = out.replace(/(?<![\p{L}])(?:(?:[àa]|[àa]s)\s+)?meia[\s-]noite(?![\p{L}])/giu, ' 0h ');
+  out = out.replace(TIME_SPOKEN, (match, hourWord, hoursWord, minuteWord, period) => {
+    // Só "às" com acento conta: "estudar as duas matérias" não é horário.
+    const explicit = /^\s*às\s/iu.test(match) || hoursWord || minuteWord || period;
+    if (!explicit) return match;
+    let hour = toNumber(hourWord, NUMBER_WORDS);
+    const minute = minuteWord ? toNumber(minuteWord, MINUTE_WORDS) : 0;
+    if (hour == null || minute == null || hour > 23 || minute > 59) return match;
+    const key = normalizeText(period ?? '');
+    if ((key === 'tarde' || key === 'noite') && hour < 12) hour += 12;
+    return ` ${hour}h${minute ? pad(minute) : ''} `;
+  });
+  out = out.replace(/(?<![\p{L}])(?:dia\s+)?(\d{1,2})\s+de\s+(\p{L}+)/giu, (match, day, month) => {
+    const index = MONTHS.indexOf(normalizeText(month));
+    return index === -1 ? match : ` ${day}/${index + 1} `;
+  });
+  out = out.replace(/(?<![\p{L}])(?:(?:no|na|em)\s+)?(?:espa[çc]o|hashtag)\s+(\p{L}[\p{L}\d-]*)/giu, (match, name) => {
+    const space = spaceNames.find(s => normalizeText(s).startsWith(normalizeText(name)));
+    return space ? ` #${normalizeText(space).replace(/\s+/g, '')} ` : match;
+  });
+  out = out.replace(/(?<![\p{L}])(?:com\s+)?prioridade\s+(alta|m[ée]dia|baixa)(?![\p{L}])/giu, (match, level) => ` !${normalizeText(level)} `);
+  return out.replace(/\s+,/g, ',').replace(/\s+/g, ' ').trim();
+}
+
 /**
  * Interpreta a mensagem. `now` define "hoje" e a hora atual; `spaceNames` são os espaços da conta.
  * Devolve { title, dueDate, reminderTime, category, priority } — campos não informados ficam null.
  */
 export function parseTaskMessage(text, { now = new Date(), spaceNames = SPACES } = {}) {
   const today = toISODate(now);
-  const raw = String(text ?? '').slice(0, MESSAGE_MAX).replace(/\s+/g, ' ').trim();
+  const raw = String(text ?? '').slice(0, MESSAGE_MAX).replace(/\s+/g, ' ').trim()
+    .replace(/([#!@][^\s,;.]+)[,;.]+(?=\s|$)/gu, '$1'); // "#estudos," → "#estudos"
   // 1) Atalhos explícitos do app: têm prioridade sobre a leitura natural.
   const quick = parseQuickAdd(raw, today, spaceNames);
   let dueDate = quick.dueDate ?? null;
@@ -82,7 +126,7 @@ export function parseTaskMessage(text, { now = new Date(), spaceNames = SPACES }
   }
 
   return {
-    title: kept.join(' ').trim(),
+    title: kept.join(' ').trim().replace(/[\s,;:–—-]+$/u, ''),
     dueDate,
     reminderTime,
     category: quick.category ?? null,

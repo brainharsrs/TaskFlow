@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Assistente do TaskFlow no Telegram (beta). Roda no computador, por long polling.",
-  "engines": { "node": ">=20.6" },
+  "engines": {
+    "node": ">=20.6"
+  },
   "scripts": {
     "start": "node --env-file=.env src/index.js",
-    "simulate": "node src/simulate.js"
+    "simulate": "node src/simulate.js",
+    "modelo": "node src/download-model.js"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
     "firebase-admin": "^13.0.0"
   }
 }

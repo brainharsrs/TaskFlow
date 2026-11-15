@@ -7,7 +7,9 @@ O diferencial do plano Pro: a pessoa conversa com um bot do TaskFlow no Telegram
 - **Lembretes**: o horário de cada tarefa chega como mensagem.
 - Comandos: `/hoje`, `/ajuda`, `/desvincular`.
 
-Durante o beta, tudo isso é **grátis para todas as contas** ("Pro grátis durante o beta"). Depois, o mesmo núcleo (`bot/src/bot.js`) pode ser ligado ao WhatsApp (API oficial da Meta). Áudio virando tarefa fica para uma etapa futura.
+- **Áudio vira tarefa**: mande uma mensagem de voz ("prova de história sexta às duas da tarde, no espaço estudos, prioridade alta"). O bot responde com o que entendeu e cria a tarefa.
+
+Durante o beta, tudo isso é **grátis para todas as contas** ("Pro grátis durante o beta"). Depois, o mesmo núcleo (`bot/src/bot.js`) pode ser ligado ao WhatsApp (API oficial da Meta).
 
 ## Como funciona
 
@@ -74,7 +76,13 @@ npm install
 copy .env.example .env
 ```
 
-Abra `bot/.env` e preencha `TELEGRAM_BOT_TOKEN` e `FIREBASE_SERVICE_ACCOUNT_FILE` (use barras `/` no caminho). Depois:
+Abra `bot/.env` e preencha `TELEGRAM_BOT_TOKEN` e `FIREBASE_SERVICE_ACCOUNT_FILE` (use barras `/` no caminho). Para o bot entender áudios, baixe o modelo de voz uma vez:
+
+```bash
+npm run modelo
+```
+
+Depois:
 
 ```bash
 npm start
@@ -101,6 +109,16 @@ Você digita como se fosse o chat. Comece com `/start TASK2345` e mande mensagen
 ### Testes automáticos
 
 Na raiz do projeto: `npm test`. Cobrem o parser de mensagens, o código de vínculo (formato, validade, uso único, limite de tentativas) e os fluxos do bot (vincular, criar tarefa, desvincular pelo bot e pelo app, resumo diário e lembretes), sem rede e sem Firebase.
+
+## Áudios
+
+- A transcrição roda **no computador do bot**, com o modelo de código aberto Whisper (`Xenova/whisper-small`, ~250 MB). O áudio não é enviado a nenhum serviço externo além do próprio Telegram, e não precisa de conta, cartão nem chave de API.
+- Requisitos: **ffmpeg** no PATH (`ffmpeg -version`) e o modelo baixado **uma vez**, dentro de `bot/`, com `npm run modelo` (~250 MB, mostra o progresso e continua de onde parou se a internet cair). Ele fica em `%LOCALAPPDATA%/taskflow-bot/models` (fora do projeto e do OneDrive), e o bot o carrega só do disco, sem baixar nada escondido.
+- Tempo: ~3–5 s por áudio curto num notebook comum; o modelo é carregado quando o bot liga.
+- Limites: até 2 minutos e 5 MB por áudio; um áudio é transcrito por vez.
+- O que a fala entende, além dos atalhos de texto: "às duas da tarde" → 14h, "dez e meia" → 10:30, "meio-dia", "dia 25 de novembro", "no espaço estudos", "prioridade alta". Número solto ("comprar 2 pães") não vira horário.
+- Testar sem Telegram: `npm run simulate` e depois `:audio C:/caminho/arquivo.ogg`.
+- Desligar: `AUDIO=off` no `bot/.env`. Trocar de modelo: `WHISPER_MODEL=Xenova/whisper-base` (mais rápido, erra mais) ou `Xenova/whisper-medium` (mais preciso, mais lento).
 
 ## Encerrar o beta
 
