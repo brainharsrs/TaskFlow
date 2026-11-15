@@ -1,0 +1,121 @@
+// TaskFlow bot — dados no Cloud Firestore pelo Admin SDK (servidor).
+//
+//   telegramLinkCodes/{CÓDIGO}   { uid, createdAt }              — o app cria; o bot lê e apaga
+//   users/{uid}.telegram         { chatId, username, linkedAt,  — só o servidor escreve
+//                                  lastSummaryDate, remindersDate, remindedKeys }
+//   telegramChats/{chatId}       { uid }                         — índice reverso, só o servidor
+//   users/{uid}/tasks/{id}       mesma forma que o app grava (ver js/services/task-repo.js)
+//
+// O Admin SDK ignora as regras do Firestore. Por isso toda validação acontece aqui e em bot.js.
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { readFileSync } from 'node:fs';
+import { normalizeTask, DEFAULT_SPACES } from '../../js/core/domain.js';
+import { checkLinkCode } from '../../js/core/telegram-link.js';
+
+export function createFirestoreStore({ serviceAccountFile }) {
+  const credentials = JSON.parse(readFileSync(serviceAccountFile, 'utf8'));
+  const app = initializeApp({ credential: cert(credentials) });
+  const db = getFirestore(app);
+  const userRef = uid => db.collection('users').doc(uid);
+  const chatRef = chatId => db.collection('telegramChats').doc(String(chatId));
+  const tasksRef = uid => userRef(uid).collection('tasks');
+
+  return {
+    projectId: credentials.project_id,
+
+    /** Tudo numa transação: o código é conferido e apagado de uma vez (uso único). */
+    linkChat({ code, chatId, profile = {}, nowMs }) {
+      return db.runTransaction(async tx => {
+        const codeRef = db.collection('telegramLinkCodes').doc(code);
+        const codeSnap = await tx.get(codeRef);
+        const data = codeSnap.exists ? codeSnap.data() : null;
+        const record = data && { uid: data.uid, createdAtMs: data.createdAt?.toMillis?.() };
+        const status = checkLinkCode(record, nowMs);
+        if (status !== 'ok') { if (status === 'expired') tx.delete(codeRef); return status; }
+
+        const userSnap = await tx.get(userRef(record.uid));
+        const oldChat = userSnap.get('telegram.chatId');
+        const chatSnap = await tx.get(chatRef(chatId));
+        const previousUid = chatSnap.exists ? chatSnap.get('uid') : null;
+
+        if (oldChat && oldChat !== chatId) tx.delete(chatRef(oldChat));
+        if (previousUid && previousUid !== record.uid) tx.update(userRef(previousUid), { telegram: FieldValue.delete() });
+        tx.set(userRef(record.uid), {
+          telegram: { chatId, username: profile.username ?? null, linkedAt: FieldValue.serverTimestamp() }
+        }, { merge: true });
+        tx.set(chatRef(chatId), { uid: record.uid });
+        tx.delete(codeRef);
+        return 'ok';
+      });
+    },
+
+    async findUidByChat(chatId) {
+      const snap = await chatRef(chatId).get();
+      if (!snap.exists) return null;
+      const uid = snap.get('uid');
+      const user = await userRef(uid).get();
+      // A pessoa pode ter desvinculado pelo app (que só consegue remover users/{uid}.telegram).
+      if (user.get('telegram.chatId') !== chatId) { await chatRef(chatId).delete(); return null; }
+      return uid;
+    },
+
+    async unlinkChat(uid, chatId) {
+      const batch = db.batch();
+      batch.set(userRef(uid), { telegram: FieldValue.delete() }, { merge: true });
+      batch.delete(chatRef(chatId));
+      await batch.commit();
+    },
+
+    async getUser(uid) {
+      const snap = await userRef(uid).get();
+      return { plan: snap.get('plan') === 'pro' ? 'pro' : 'free', telegram: snap.get('telegram') ?? null };
+    },
+
+    async listSpaceNames(uid) {
+      const snap = await userRef(uid).collection('spaces').get();
+      const custom = snap.docs.map(doc => String(doc.get('name') ?? '').trim()).filter(Boolean);
+      return [...DEFAULT_SPACES.map(space => space.name), ...custom];
+    },
+
+    /** Mesmo formato do app (task-repo.js), para passar pelas mesmas regras quando o app editar depois. */
+    async createTask(uid, fields) {
+      const ref = tasksRef(uid).doc();
+      await ref.set({
+        ...fields,
+        status: 'pending',
+        completed: false,
+        completedAt: null,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp()
+      });
+      return ref.id;
+    },
+
+    async listOpenTasks(uid) {
+      const snap = await tasksRef(uid).where('completed', '==', false).get();
+      return snap.docs.map(doc => normalizeTask(doc.id, doc.data()));
+    },
+
+    async listTasksDueOn(uid, date) {
+      const snap = await tasksRef(uid).where('dueDate', '==', date).get();
+      return snap.docs.map(doc => normalizeTask(doc.id, doc.data()));
+    },
+
+    async listLinkedUsers() {
+      const snap = await db.collection('telegramChats').get();
+      const result = [];
+      for (const doc of snap.docs) {
+        const uid = doc.get('uid');
+        const telegram = (await userRef(uid).get()).get('telegram');
+        if (telegram?.chatId === doc.id) result.push({ uid, telegram });
+      }
+      return result;
+    },
+
+    async updateTelegramState(uid, patch) {
+      const updates = Object.fromEntries(Object.entries(patch).map(([key, value]) => [`telegram.${key}`, value]));
+      await userRef(uid).update(updates).catch(() => {}); // desvinculado no meio do caminho: ignora
+    }
+  };
+}

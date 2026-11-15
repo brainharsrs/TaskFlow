@@ -138,7 +138,7 @@ export const VIEWS = {
 
 const BUCKET_LABEL = { overdue: 'Atrasadas', today: 'Hoje', upcoming: 'Próximas', someday: 'Sem data', done: 'Concluídas' };
 
-const normalizeText = text => text.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[̀-ͯ]/g, '');
+export const normalizeText = text => text.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 export function matchesQuery(task, query) {
   const q = normalizeText(query.trim());

@@ -76,5 +76,6 @@ node_modules/
 
 # Segredos locais
 .env.*
+!.env.example
 *.secret
 service-account*.json

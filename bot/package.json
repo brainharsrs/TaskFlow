@@ -1,0 +1,15 @@
+{
+  "name": "taskflow-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Assistente do TaskFlow no Telegram (beta). Roda no computador, por long polling.",
+  "engines": { "node": ">=20.6" },
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "simulate": "node src/simulate.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}
