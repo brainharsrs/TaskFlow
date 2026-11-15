@@ -1,5 +1,7 @@
 # Pagamentos, plano Pro e promoções
 
+> **Atualização:** o TaskFlow passou a cobrar pelo **Mercado Pago**, em conta de um responsável adulto, com ativação automática do Pro. Guia em [MERCADOPAGO.md](MERCADOPAGO.md). O conteúdo abaixo (Stripe) fica como histórico.
+
 O TaskFlow cobra o plano Pro por um **link de pagamento da Stripe** (Payment Link). O checkout é uma página da Stripe: o TaskFlow não vê, não trafega e não guarda dados de cartão. Não há backend nem plano Blaze.
 
 **Estado atual:** a página de planos, o bloqueio dos recursos Pro e a leitura do plano estão prontos. O botão "Assinar o Pro" fica **desativado** ("Assinatura em breve") até você colar o link em [`js/config.js`](../js/config.js). Nenhuma cobrança acontece antes disso.

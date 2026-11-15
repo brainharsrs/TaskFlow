@@ -1,7 +1,35 @@
 // TaskFlow — diálogos da conta: planos e pagamento, notificações e novo espaço.
 import { h, ICONS } from './dom.js';
 import { showToast } from './toast.js';
-import { PRO_PRICE, PRO_PERIOD, STRIPE_PAYMENT_LINK, PLAN_FEATURES, PRO_FREE_BETA, TELEGRAM_BOT_USERNAME } from '../config.js';
+import { PRO_PRICE, PRO_PERIOD, STRIPE_PAYMENT_LINK, PLAN_FEATURES, PRO_FREE_BETA, TELEGRAM_BOT_USERNAME, BILLING_API_URL } from '../config.js';
+import { auth } from '../firebase.js';
+
+/**
+ * Pede ao servidor uma assinatura do Mercado Pago e leva a pessoa ao checkout.
+ * Só vai o token de login (o servidor descobre quem é); nenhum dado de cartão passa pelo TaskFlow.
+ */
+async function startMercadoPagoCheckout(button, message) {
+  button.disabled = true;
+  const label = button.textContent;
+  button.textContent = 'Abrindo o Mercado Pago…';
+  message.textContent = '';
+  try {
+    const token = await auth?.currentUser?.getIdToken();
+    if (!token) throw new Error('Entre na sua conta para assinar.');
+    const response = await fetch(`${BILLING_API_URL}/billing/checkout`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(30_000)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.url) throw new Error(data.error ? `Não foi possível iniciar a assinatura: ${data.error}.` : 'Não foi possível iniciar a assinatura agora.');
+    location.href = data.url;
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = label;
+    message.textContent = error.name === 'TimeoutError' ? 'O servidor demorou para responder. Tente de novo em instantes.' : error.message;
+  }
+}
 import { SPACE_COLORS, SPACE_NAME_MAX } from '../core/domain.js';
 import {
   notificationPermission, notificationsEnabled, enableNotifications, disableNotifications, notifySystem
@@ -59,7 +87,14 @@ export function openPlans({ state, reason = null, onCreateAccount }) {
     note = 'Durante o beta, todos os recursos Pro — inclusive o assistente no Telegram — estão liberados para todas as contas. Nenhuma cobrança é feita.';
   } else if (isPro) {
     action = h('button', { class: 'btn btn-block', type: 'button', disabled: true }, 'Este é o seu plano');
-    note = 'Para alterar a forma de pagamento ou cancelar, use o link enviado pela Stripe no e-mail de confirmação da assinatura.';
+    note = BILLING_API_URL
+      ? 'Para cancelar ou trocar o cartão, abra o Mercado Pago → Assinaturas. Ao cancelar, o Pro continua até o fim do período pago.'
+      : 'Para alterar a forma de pagamento ou cancelar, use o link enviado pela Stripe no e-mail de confirmação da assinatura.';
+  } else if (BILLING_API_URL) {
+    const message = h('p', { class: 'field-error is-shown', 'aria-live': 'polite' });
+    const button = h('button', { class: 'btn btn-primary btn-block', type: 'button', onclick: () => startMercadoPagoCheckout(button, message) }, 'Assinar com Mercado Pago');
+    action = h('div', { class: 'checkout-action' }, button, message);
+    note = 'O pagamento acontece no Mercado Pago (cartão de crédito); o TaskFlow não vê nem guarda os dados do cartão. O Pro é ativado automaticamente assim que o Mercado Pago confirmar.';
   } else if (!url) {
     action = h('button', { class: 'btn btn-block', type: 'button', disabled: true }, 'Assinatura em breve');
     note = 'O pagamento ainda está sendo configurado. Nenhuma cobrança é feita por enquanto.';

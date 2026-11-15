@@ -26,6 +26,13 @@ export const AUTH_METHODS = {
 };
 
 /**
+ * Cobrança pelo Mercado Pago: endereço do servidor (o mesmo do bot, no Render) que cria a assinatura.
+ * Público. O token do Mercado Pago fica SÓ no servidor. Vazio = botão de assinar desligado.
+ * Passo a passo em docs/MERCADOPAGO.md.
+ */
+export const BILLING_API_URL = 'https://taskflow-bot-5tqq.onrender.com';
+
+/**
  * Beta: o Pro fica liberado para todas as contas, sem pagamento. A mesma chave existe em
  * firestore.rules (função betaProFree) e em bot/src/bot.js — mude as três juntas ao encerrar o beta.
  */

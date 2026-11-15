@@ -82,10 +82,27 @@ if (mode === 'webhook') {
   const { createWebhookServer, webhookSecretFor } = await import('./webhook.js');
   const secret = webhookSecretFor(env.TELEGRAM_BOT_TOKEN);
   const port = Number(env.PORT || 10000);
-  const server = createWebhookServer({ secret, onUpdate: handleUpdate, log });
+
+  // Cobrança do Pro pelo Mercado Pago: só liga se o token estiver configurado (docs/MERCADOPAGO.md).
+  let billing = null;
+  if (env.MP_ACCESS_TOKEN) {
+    if (!env.MP_WEBHOOK_SECRET) log('ATENÇÃO: MP_WEBHOOK_SECRET ausente — notificações do Mercado Pago serão recusadas.');
+    const { createBilling } = await import('./billing.js');
+    billing = createBilling({
+      accessToken: env.MP_ACCESS_TOKEN,
+      webhookSecret: env.MP_WEBHOOK_SECRET,
+      appUrl: (env.APP_URL || 'https://taskflow-br.web.app').replace(/\/+$/, ''),
+      price: Number(env.PRO_PRICE_BRL || 9.9),
+      verifyIdToken: token => store.verifyIdToken(token),
+      setPlan: (uid, data) => store.setPlan(uid, data),
+      log
+    });
+  }
+  const allowedOrigins = (env.ALLOWED_ORIGINS || 'https://taskflow-br.web.app,https://taskflow-br.firebaseapp.com').split(',').map(origin => origin.trim()).filter(Boolean);
+  const server = createWebhookServer({ secret, onUpdate: handleUpdate, billing, allowedOrigins, log });
   await new Promise(resolve => server.listen(port, resolve));
   await telegram.setWebhook(`${publicUrl}/telegram`, secret);
-  log(`bot @${me.username} no ar em modo webhook (${publicUrl}) · projeto ${store.projectId} · áudio ${audioOn ? 'ligado' : 'desligado'}`);
+  log(`bot @${me.username} no ar em modo webhook (${publicUrl}) · projeto ${store.projectId} · áudio ${audioOn ? "ligado" : "desligado"} · cobrança ${billing ? "Mercado Pago" : "desligada"}`);
 
   // Mantém o serviço acordado: o plano grátis do Render dorme após 15 min sem visitas, e dormindo
   // não há lembretes nem resumo. Um ping a cada 10 min ≈ 744 h/mês, dentro das 750 h grátis.

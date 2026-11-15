@@ -1,5 +1,12 @@
 # Registro de alterações
 
+## 2.7.0 — 15/11/2026
+
+### Pagamentos (Mercado Pago)
+- **Assinatura do Pro pelo Mercado Pago**, em conta de um responsável adulto. O servidor do Render cria a assinatura (`/billing/checkout`, com login verificado) e recebe o webhook (`/billing/webhook`, assinatura x-signature + consulta à API), ativando ou removendo o Pro sozinho.
+- Botão "Assinar com Mercado Pago" no app; durante o beta continua "Pro grátis durante o beta".
+- Guia em [docs/MERCADOPAGO.md](docs/MERCADOPAGO.md). 7 testes novos (78 no total).
+
 ## 2.6.0 — 15/11/2026
 
 ### Requer ação sua

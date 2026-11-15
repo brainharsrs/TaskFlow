@@ -21,6 +21,8 @@ Registro do que foi feito até 15/11/2026, para retomar o trabalho depois.
 
 ## Pendências
 
+0. Mercado Pago: o responsável cria a aplicação e as contas de teste, e os segredos vão para o Render (docs/MERCADOPAGO.md).
+
 1. Revogar a chave secreta de teste do Stripe que foi colada no chat e gerar uma nova no painel (se ainda não foi feito). Não colar chaves em conversas nem no código.
 2. Telegram: criar o bot no @BotFather, gerar a chave de serviço, preencher `bot/.env` e `TELEGRAM_BOT_USERNAME` (passo a passo em `docs/TELEGRAM.md`).
 3. Publicar as regras do Firestore v4 e o site (só quando decidir).

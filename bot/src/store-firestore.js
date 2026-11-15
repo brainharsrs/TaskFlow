@@ -9,6 +9,7 @@
 // O Admin SDK ignora as regras do Firestore. Por isso toda validação acontece aqui e em bot.js.
 import { initializeApp, cert } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import { readFileSync } from 'node:fs';
 import { normalizeTask, DEFAULT_SPACES } from '../../js/core/domain.js';
 import { checkLinkCode } from '../../js/core/telegram-link.js';
@@ -82,6 +83,20 @@ export function createFirestoreStore({ credentials }) {
     async getUser(uid) {
       const snap = await userRef(uid).get();
       return { plan: snap.get('plan') === 'pro' ? 'pro' : 'free', telegram: snap.get('telegram') ?? null };
+    },
+
+    /** Grava o plano vindo do Mercado Pago. Só o servidor escreve em users/{uid} (as regras impedem o app). */
+    async setPlan(uid, { plan, subscriptionId, status }) {
+      await userRef(uid).set({
+        plan,
+        billing: { provider: 'mercadopago', subscriptionId: String(subscriptionId ?? ''), status: String(status ?? ''), updatedAt: FieldValue.serverTimestamp() }
+      }, { merge: true });
+    },
+
+    /** Confere o login do app (token do Firebase Auth) e devolve { uid, email }. */
+    async verifyIdToken(token) {
+      const decoded = await getAuth(app).verifyIdToken(token);
+      return { uid: decoded.uid, email: decoded.email ?? null };
     },
 
     async listSpaceNames(uid) {
