@@ -90,6 +90,20 @@ export function createFirestoreStore({ credentials }) {
       return [...DEFAULT_SPACES.map(space => space.name), ...custom];
     },
 
+    /** Espaços padrão (builtin) + personalizados, com o id do documento para excluir. */
+    async listSpaces(uid) {
+      const snap = await userRef(uid).collection('spaces').get();
+      const custom = snap.docs
+        .map(doc => ({ id: doc.id, name: String(doc.get('name') ?? '').trim(), builtin: false, createdAt: doc.get('createdAt')?.toMillis?.() ?? 0 }))
+        .filter(space => space.name)
+        .sort((a, b) => a.createdAt - b.createdAt);
+      return [...DEFAULT_SPACES.map(space => ({ id: space.id, name: space.name, builtin: true })), ...custom];
+    },
+
+    async deleteSpace(uid, id) {
+      await userRef(uid).collection('spaces').doc(String(id)).delete();
+    },
+
     /** Mesmo formato do app (account-repo.js): { name, color, createdAt }. */
     async createSpace(uid, { name, color }) {
       await userRef(uid).collection('spaces').add({ name, color, createdAt: FieldValue.serverTimestamp() });

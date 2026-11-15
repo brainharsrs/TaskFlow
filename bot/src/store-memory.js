@@ -48,6 +48,13 @@ export function createMemoryStore() {
     async getUser(uid) { const { plan, telegram } = userOf(uid); return { plan, telegram }; },
     async listSpaceNames(uid) { return [...DEFAULT_SPACES.map(s => s.name), ...userOf(uid).spaces]; },
     async createSpace(uid, { name }) { userOf(uid).spaces.push(name); },
+    async listSpaces(uid) {
+      return [
+        ...DEFAULT_SPACES.map(space => ({ id: space.id, name: space.name, builtin: true })),
+        ...userOf(uid).spaces.map(name => ({ id: `custom:${name}`, name, builtin: false }))
+      ];
+    },
+    async deleteSpace(uid, id) { const user = userOf(uid); user.spaces = user.spaces.filter(name => `custom:${name}` !== id); },
     async createTask(uid, fields) {
       const now = Date.now();
       return this.putTask(uid, { ...fields, notes: '', status: 'pending', completed: false, completedAt: null, createdAt: now, updatedAt: now });

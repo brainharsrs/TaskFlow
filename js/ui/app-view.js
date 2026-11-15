@@ -3,7 +3,7 @@ import { byId, $, $$, h, ICONS, initialOf } from './dom.js';
 import { movePill, countTo, spring } from './motion.js';
 import { renderTaskList } from './task-list.js';
 import { renderReport } from './report.js';
-import { openPlans, openNotificationPrefs, openNewSpace, openTelegram } from './account-ui.js';
+import { openPlans, openNotificationPrefs, openNewSpace, openTelegram, openManageSpaces } from './account-ui.js';
 import { PRO_FREE_BETA } from '../config.js';
 import { showToast } from './toast.js';
 import { store } from '../core/store.js';
@@ -146,7 +146,12 @@ export function initAppView(handlers) {
   byId('urgentBanner').addEventListener('click', () => store.set({ view: 'urgent', space: null, query: '' }));
 
   const toggleSpace = name => store.set(state => ({ space: state.space === name || !name ? null : name, view: state.view === 'report' ? 'all' : state.view }));
+  const startNewSpace = () => {
+    if (!requirePro('Espaços personalizados fazem parte do Pro.')) return;
+    openNewSpace({ onCreate: input => callbacks.onCreateSpace(input, spaceNames()) });
+  };
   const onSpaceClick = event => {
+    if (event.target.closest('[data-new-space]')) { startNewSpace(); return; }
     const remove = event.target.closest('[data-remove-space]');
     if (remove) { requestDeleteSpace(remove.dataset.removeSpace); return; }
     const item = event.target.closest('[data-space]');
@@ -154,9 +159,11 @@ export function initAppView(handlers) {
   };
   byId('spaceNav').addEventListener('click', onSpaceClick);
   byId('spaceChips').addEventListener('click', onSpaceClick);
-  byId('addSpaceButton').addEventListener('click', () => {
-    if (!requirePro('Espaços personalizados fazem parte do Pro.')) return;
-    openNewSpace({ onCreate: input => callbacks.onCreateSpace(input, spaceNames()) });
+  byId('addSpaceButton').addEventListener('click', startNewSpace);
+  // Menu da conta → Espaços: criar e excluir em qualquer tela (no celular não há barra lateral).
+  byId('spacesButton').addEventListener('click', () => {
+    byId('profileMenu').hidePopover();
+    openManageSpaces({ getState: store.get, subscribe: store.subscribe, onNew: startNewSpace, onDelete: requestDeleteSpace });
   });
   byId('sortSelect').addEventListener('change', event => store.set({ sort: event.target.value }));
 
@@ -278,7 +285,8 @@ function renderSpaces(state, counts) {
   byId('spaceChips').replaceChildren(
     h('button', { class: 'chip', type: 'button', dataset: { space: '' }, 'aria-pressed': String(state.space === null) }, 'Todos'),
     ...state.spaces.map(space => h('button', { class: 'chip', type: 'button', dataset: { space: space.name }, 'aria-pressed': String(state.space === space.name) },
-      h('span', { class: 'dot', dataset: { color: space.color } }), space.name)));
+      h('span', { class: 'dot', dataset: { color: space.color } }), space.name)),
+    h('button', { class: 'chip chip-add', type: 'button', dataset: { newSpace: '' }, 'aria-label': 'Novo espaço' }, '+ Espaço'));
 }
 
 function renderNav(state, counts) {

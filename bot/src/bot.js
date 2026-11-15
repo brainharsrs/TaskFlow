@@ -8,7 +8,7 @@ import {
 
 const PRIORITY_WEIGHT_ORDER = { high: 0, medium: 1, low: 2 };
 import { normalizeLinkCode } from '../../js/core/telegram-link.js';
-import { parseTaskMessage, spokenToShortcuts, parseSpaceRequest } from './parse-message.js';
+import { parseTaskMessage, spokenToShortcuts, parseSpaceRequest, parseSpaceDelete, isSpaceList } from './parse-message.js';
 
 /** Durante o beta o Pro é grátis para todos. Mesma chave de js/config.js e firestore.rules. */
 export const PRO_FREE_BETA = true;
@@ -35,6 +35,8 @@ const HELP = [
   'Comandos:',
   '/hoje — tarefas de hoje e atrasadas',
   '/espaco Nome cor — cria um espaço (aba) no site',
+  '/apagarespaco Nome — exclui um espaço sem tarefas abertas',
+  '/espacos — lista seus espaços',
   '/desvincular — desliga este chat da sua conta',
   '/ajuda — esta mensagem'
 ].join('\n');
@@ -166,6 +168,33 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
     return send(chatId, `📁 Espaço ${name} criado (${COLOR_LABEL[color]}). Ele já aparece no site.\nPara mandar tarefas para ele, use ${hashtagOf(name)} — ex.: "reunião amanhã 10h ${hashtagOf(name)}".`);
   }
 
+  /** "apagar espaço Trabalho": mesma regra do site — só personalizados e sem tarefas abertas. */
+  async function deleteSpace(chatId, uid, request) {
+    const spaces = await store.listSpaces(uid);
+    const custom = spaces.filter(space => !space.builtin);
+    if (!request.name) {
+      return send(chatId, custom.length
+        ? `Qual espaço? Os que você pode excluir: ${custom.map(space => space.name).join(', ')}.\nEx.: "apagar espaço ${custom[0].name}".`
+        : 'Você ainda não tem espaços personalizados para excluir.');
+    }
+    const key = normalizeText(request.name);
+    const space = spaces.find(candidate => normalizeText(candidate.name) === key);
+    if (!space) return send(chatId, `Não achei o espaço "${request.name}". Mande /espacos para ver a lista.`);
+    if (space.builtin) return send(chatId, `${space.name} é um espaço padrão e não pode ser excluído.`);
+    const open = (await store.listOpenTasks(uid)).filter(task => task.category === space.name).length;
+    if (open > 0) {
+      return send(chatId, `${space.name} ainda tem ${open} ${open === 1 ? 'tarefa aberta' : 'tarefas abertas'}. Conclua ou mova para outro espaço no site antes de excluir.`);
+    }
+    await store.deleteSpace(uid, space.id);
+    return send(chatId, `🗑️ Espaço ${space.name} excluído. Ele já sumiu do site.`);
+  }
+
+  async function listSpaces(chatId, uid) {
+    const spaces = await store.listSpaces(uid);
+    const lines = spaces.map(space => `• ${space.name} — ${hashtagOf(space.name)}${space.builtin ? ' (padrão)' : ''}`);
+    return send(chatId, `📁 Seus espaços:\n${lines.join('\n')}\n\nCriar: "criar espaço Trabalho azul" · Excluir: "apagar espaço Trabalho"`);
+  }
+
   async function handleAudio(chatId, audio) {
     const uid = await store.findUidByChat(chatId);
     if (!uid) return send(chatId, WELCOME_UNLINKED);
@@ -205,6 +234,9 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
       await store.unlinkChat(uid, chatId);
       return send(chatId, 'Chat desvinculado. Suas tarefas continuam no TaskFlow. Para voltar, gere um novo código no app.');
     }
+    if (isSpaceList(body)) return listSpaces(chatId, uid);
+    const deleteRequest = parseSpaceDelete(body);
+    if (deleteRequest) return deleteSpace(chatId, uid, deleteRequest);
     if (command === 'espaco' || command === 'espaço' || command === 'aba') {
       return createSpace(chatId, uid, parseSpaceRequest(body) ?? { name: argument, color: null });
     }

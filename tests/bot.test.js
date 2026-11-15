@@ -3,7 +3,7 @@
 process.env.TZ = 'America/Sao_Paulo';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTaskMessage, parseTimeWord, parseDateWord, spokenToShortcuts, parseSpaceRequest, extractUrgency } from '../bot/src/parse-message.js';
+import { parseTaskMessage, parseTimeWord, parseDateWord, spokenToShortcuts, parseSpaceRequest, extractUrgency, parseSpaceDelete, isSpaceList } from '../bot/src/parse-message.js';
 import {
   makeLinkCode, normalizeLinkCode, checkLinkCode, LINK_CODE_PATTERN, LINK_CODE_TTL_MS, LINK_CODE_ALPHABET
 } from '../js/core/telegram-link.js';
@@ -409,4 +409,41 @@ test('bot: resumo do dia mostra urgentes primeiro, com 🚨', () => {
   ];
   const text = dailySummaryText(tasks, new Date(2026, 10, 15, 7, 0));
   assert.match(text, /Hoje \(2\):\n🚨 Pegando fogo/);
+});
+
+test('espaço: pedidos de excluir e listar', () => {
+  assert.deepEqual(parseSpaceDelete('apagar espaço Trabalho'), { name: 'Trabalho' });
+  assert.deepEqual(parseSpaceDelete('/apagarespaco #casa'), { name: 'casa' });
+  assert.deepEqual(parseSpaceDelete('excluir a aba Academia.'), { name: 'Academia' });
+  assert.deepEqual(parseSpaceDelete('deletar espaço'), { name: '' });
+  assert.equal(parseSpaceDelete('apagar mensagens antigas'), null, 'é tarefa');
+  assert.ok(isSpaceList('/espacos'));
+  assert.ok(isSpaceList('meus espaços'));
+  assert.ok(isSpaceList('listar abas'));
+  assert.ok(!isSpaceList('ver espaços de coworking amanhã'));
+});
+
+test('bot: exclui espaço só se for personalizado e sem tarefas abertas', async () => {
+  const { store, bot, last } = linkedBot();
+  await bot.handleMessage({ chatId: '77', text: '/start TASK2345' });
+  await bot.handleMessage({ chatId: '77', text: 'criar espaço Trabalho' });
+  await bot.handleMessage({ chatId: '77', text: 'reunião amanhã #trabalho' });
+
+  await bot.handleMessage({ chatId: '77', text: 'apagar espaço Estudos' });
+  assert.match(last(), /padrão e não pode ser excluído/);
+  await bot.handleMessage({ chatId: '77', text: 'apagar espaço Trabalho' });
+  assert.match(last(), /ainda tem 1 tarefa aberta/);
+  await bot.handleMessage({ chatId: '77', text: 'apagar espaço Inexistente' });
+  assert.match(last(), /Não achei/);
+
+  const [task] = store.tasksOf('ana');
+  store.putTask('ana', { ...task, completed: true }); // a mesma tarefa, agora concluída
+  store.tasksOf('ana').forEach(item => { if (!item.completed && item.category === 'Trabalho') item.completed = true; });
+  await bot.handleMessage({ chatId: '77', text: '/apagarespaco trabalho' });
+  assert.match(last(), /Espaço Trabalho excluído/);
+  assert.deepEqual(await store.listSpaceNames('ana'), ['Pessoal', 'Estudos', 'Projetos']);
+
+  await bot.handleMessage({ chatId: '77', text: '/espacos' });
+  assert.match(last(), /Seus espaços:\n• Pessoal — #pessoal \(padrão\)/);
+  assert.equal(store.tasksOf('ana').filter(item => !item.completed).length, 0, 'pedidos não viraram tarefas');
 });

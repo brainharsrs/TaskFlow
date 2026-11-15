@@ -205,6 +205,47 @@ export function openTelegram({ state, subscribe, onCreateCode, onUnlink, onCreat
   return dialog;
 }
 
+// ---------- Gerenciar espaços ----------
+
+/**
+ * Lista os espaços com "Excluir" (só os personalizados) e "Novo espaço". Atualiza sozinha
+ * quando um espaço é criado ou excluído (inclusive pelo bot do Telegram).
+ */
+export function openManageSpaces({ getState, subscribe, onNew, onDelete }) {
+  const list = h('ul', { class: 'spaces-manage' });
+  const render = state => {
+    const openBySpace = new Map();
+    for (const task of state.tasks) if (!task.completed) openBySpace.set(task.category, (openBySpace.get(task.category) ?? 0) + 1);
+    list.replaceChildren(...state.spaces.map(space => {
+      const open = openBySpace.get(space.name) ?? 0;
+      const detail = space.builtin ? 'Padrão · não pode ser excluído' : open > 0 ? `${open} ${open === 1 ? 'tarefa aberta' : 'tarefas abertas'}` : 'Sem tarefas abertas';
+      return h('li', { class: 'spaces-manage-row' },
+        h('span', { class: 'dot dot-large', dataset: { color: space.color } }),
+        h('span', { class: 'spaces-manage-text' }, h('strong', {}, space.name), h('small', {}, detail)),
+        !space.builtin && h('button', {
+          class: 'btn btn-small btn-danger', type: 'button', 'aria-label': `Excluir o espaço ${space.name}`,
+          title: open > 0 ? 'Conclua ou mova as tarefas abertas antes de excluir' : 'Excluir espaço',
+          onclick: () => onDelete(space.id)
+        }, 'Excluir'));
+    }));
+  };
+  const dialog = openDialog({
+    title: 'Espaços',
+    body: [
+      h('p', { class: 'plan-note' }, 'Espaços são as abas que organizam suas tarefas. Também dá para criar pelo Telegram: "criar espaço Trabalho azul".'),
+      list
+    ],
+    foot: [
+      h('span', { class: 'spacer' }),
+      h('button', { class: 'btn btn-primary', type: 'button', onclick: () => { dialog.close(); onNew(); } }, 'Novo espaço')
+    ]
+  });
+  render(getState());
+  const stop = subscribe(state => { if (dialog.open) render(state); });
+  dialog.addEventListener('close', stop);
+  return dialog;
+}
+
 // ---------- Novo espaço ----------
 const COLOR_LABEL = { violet: 'Violeta', sky: 'Azul', amber: 'Âmbar', mint: 'Verde', coral: 'Coral', pink: 'Rosa' };
 

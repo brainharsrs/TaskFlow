@@ -161,6 +161,19 @@ export function parseSpaceRequest(text) {
   return { name: words.join(' '), color };
 }
 
+const SPACE_DELETE = /^(?:\/(?:apagar|excluir|remover|deletar)[-_]?espa[çc]o|(?:apagar|apague|apaga|excluir|exclua|exclui|deletar|delete|deleta|remover|remova|remove)\s+(?:o\s+|a\s+)?(?:espa[çc]o|aba|categoria))\s*(.*)$/iu;
+const SPACE_LIST = /^(?:\/espa[çc]os|(?:listar|liste|lista|mostrar|mostre|mostra|ver|quais\s+s[ãa]o)\s+(?:os\s+|as\s+)?(?:meus\s+|minhas\s+)?(?:espa[çc]os|abas|categorias)|(?:meus|minhas)\s+(?:espa[çc]os|abas|categorias))[?.!]*$/iu;
+
+/** "apagar espaço Trabalho" → { name: 'Trabalho' } (name vazio se faltou); null se não for isso. */
+export function parseSpaceDelete(text) {
+  const match = SPACE_DELETE.exec(String(text ?? '').trim());
+  if (!match) return null;
+  return { name: match[1].replace(/[.!?]+$/u, '').replace(/^["“'#]|["”']$/gu, '').trim() };
+}
+
+/** "/espacos", "meus espaços", "listar abas". */
+export const isSpaceList = text => SPACE_LIST.test(String(text ?? '').trim());
+
 /**
  * Interpreta a mensagem. `now` define "hoje" e a hora atual; `spaceNames` são os espaços da conta.
  * Devolve { title, dueDate, reminderTime, category, priority } — campos não informados ficam null.

@@ -12,6 +12,10 @@
 
 ### Assistente no Telegram
 - Cria **espaços (abas)** por mensagem: "criar espaço Trabalho azul" ou `/espaco Casa verde`.
+- Exclui e lista espaços: "apagar espaço Trabalho", `/apagarespaco Trabalho`, `/espacos` (só personalizados e sem tarefas abertas, como no site).
+
+### Espaços no site
+- Menu da conta → **Espaços**: criar e excluir em qualquer tela (antes só pela barra lateral do computador). No celular, atalho **+ Espaço** nos filtros.
 - Entende tempo relativo: "em 5 minutos", "daqui a 2 horas", "em 3 dias".
 
 ## 2.5.0 — 15/11/2026
