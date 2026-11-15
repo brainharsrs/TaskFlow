@@ -120,6 +120,47 @@ export function parseRelative(text, now) {
   return { text: rest, dueDate: toISODate(at), reminderTime: `${pad(at.getHours())}:${pad(at.getMinutes())}` };
 }
 
+// ---------- Urgência: "urgente", "urgentemente", "com urgência", "é urgente" ----------
+const URGENT = /(?<![\p{L}!#@])(?:(?:é|e|muito|super)\s+)?(?:urgentemente|urgente|com\s+urg[êe]ncia|urg[êe]ncia)(?![\p{L}])[!.]*/giu;
+
+/** Tira as palavras de urgência do texto. Devolve { text, urgent }. */
+export function extractUrgency(text) {
+  let urgent = false;
+  const rest = String(text ?? '').replace(URGENT, () => { urgent = true; return ' '; }).replace(/\s+/g, ' ').trim();
+  return { text: rest, urgent };
+}
+
+// ---------- Criar espaço (aba) por mensagem ----------
+const SPACE_COMMAND = /^(?:\/espa[çc]o|\/aba|(?:criar|crie|cria|criar\s+um|crie\s+um|cria\s+um|crie\s+uma|cria\s+uma|novo|nova|adicionar|adicione|adiciona)\s+(?:um\s+|uma\s+|o\s+|a\s+)?(?:espa[çc]o|aba|categoria))(?:\s+(?:chamad[oa]|com\s+o\s+nome))?\s*(.*)$/iu;
+const COLOR_WORDS = {
+  roxo: 'violet', roxa: 'violet', violeta: 'violet', lilas: 'violet',
+  azul: 'sky', celeste: 'sky',
+  amarelo: 'amber', amarela: 'amber', laranja: 'amber', ambar: 'amber',
+  verde: 'mint', menta: 'mint',
+  vermelho: 'coral', vermelha: 'coral', coral: 'coral',
+  rosa: 'pink', pink: 'pink'
+};
+
+/**
+ * Reconhece um pedido de novo espaço. Devolve null se a mensagem não for isso,
+ * ou { name, color } (name pode vir vazio quando a pessoa não disse o nome).
+ */
+export function parseSpaceRequest(text) {
+  const match = SPACE_COMMAND.exec(String(text ?? '').trim());
+  if (!match) return null;
+  const words = match[1].replace(/[.!?]+$/u, '').replace(/^["“']|["”']$/gu, '').trim().split(/\s+/).filter(Boolean);
+  // "criar espaço para estudar no quarto" é uma TAREFA, não o nome de um espaço.
+  if (words.length && ['para', 'pra', 'de', 'do', 'da', 'no', 'na', 'em'].includes(normalizeText(words[0]))) return null;
+  let color = null;
+  const last = words.length > 1 ? normalizeText(words.at(-1)) : '';
+  if (last in COLOR_WORDS) {
+    color = COLOR_WORDS[last];
+    words.pop();
+    if (words.length > 1 && ['cor', 'na', 'em'].includes(normalizeText(words.at(-1)))) words.pop();
+  }
+  return { name: words.join(' '), color };
+}
+
 /**
  * Interpreta a mensagem. `now` define "hoje" e a hora atual; `spaceNames` são os espaços da conta.
  * Devolve { title, dueDate, reminderTime, category, priority } — campos não informados ficam null.
@@ -132,7 +173,10 @@ export function parseTaskMessage(text, { now = new Date(), spaceNames = SPACES }
   const quick = parseQuickAdd(raw, today, spaceNames);
   let dueDate = quick.dueDate ?? null;
   let reminderTime = null;
-  let title = quick.title;
+  // Urgência dita com palavras ("URGENTEMENTE") ou pelo atalho do app ("!urgente").
+  const urgency = extractUrgency(quick.title);
+  let title = urgency.text;
+  const urgent = urgency.urgent || quick.urgent === true;
 
   // 2) Tempo relativo ("em 5 minutos"), só se a data não veio por atalho.
   const relative = dueDate === null ? parseRelative(title, now) : null;
@@ -163,6 +207,8 @@ export function parseTaskMessage(text, { now = new Date(), spaceNames = SPACES }
     dueDate,
     reminderTime,
     category: quick.category ?? null,
-    priority: quick.priority ?? null
+    // Urgente sem prioridade dita vira prioridade alta.
+    priority: quick.priority ?? (urgent ? 'high' : null),
+    urgent
   };
 }

@@ -63,7 +63,7 @@ test('normalizeTask aceita Timestamp do Firestore e corrige valores inválidos',
 
 test('cleanTaskInput limpa espaços e rejeita entradas inválidas', () => {
   assert.deepEqual(cleanTaskInput({ title: '  Ler   capítulo 3 ', notes: ' ok ', category: 'Estudos', priority: 'high', dueDate: TODAY }),
-    { title: 'Ler capítulo 3', notes: 'ok', category: 'Estudos', priority: 'high', dueDate: TODAY, reminderTime: null, repeat: 'none' });
+    { title: 'Ler capítulo 3', notes: 'ok', category: 'Estudos', priority: 'high', dueDate: TODAY, reminderTime: null, repeat: 'none', urgent: false });
   assert.equal(cleanTaskInput({ title: 'A' }).dueDate, null);
   assert.throws(() => cleanTaskInput({ title: '   ' }), /task\/invalid-title/);
   assert.throws(() => cleanTaskInput({ title: 'x'.repeat(121) }), /task\/invalid-title/);
@@ -149,12 +149,12 @@ test('computeStats: hoje em branco não quebra a sequência; um dia sem nada que
 
 test('parseQuickAdd interpreta só marcadores explícitos', () => {
   assert.deepEqual(parseQuickAdd('Comprar café @amanhã #proj !alta', TODAY),
-    { title: 'Comprar café', dueDate: '2026-11-16', category: 'Projetos', priority: 'high' });
+    { title: 'Comprar café', dueDate: '2026-11-16', category: 'Projetos', priority: 'high', urgent: undefined });
   assert.equal(parseQuickAdd('Entregar relatório @sex', TODAY).dueDate, '2026-11-20');
   assert.equal(parseQuickAdd('Reunião @dom', TODAY).dueDate, '2026-11-22', 'mesmo dia da semana vai para a próxima');
   assert.equal(parseQuickAdd('Pagar conta @hoje', TODAY).dueDate, TODAY);
   // Palavras comuns e marcadores desconhecidos continuam no título.
-  assert.deepEqual(parseQuickAdd('Estudar para a prova de amanhã', TODAY), { title: 'Estudar para a prova de amanhã', dueDate: undefined, category: undefined, priority: undefined });
+  assert.deepEqual(parseQuickAdd('Estudar para a prova de amanhã', TODAY), { title: 'Estudar para a prova de amanhã', dueDate: undefined, category: undefined, priority: undefined, urgent: undefined });
   assert.equal(parseQuickAdd('Avisar @maria sobre #1 !', TODAY).title, 'Avisar @maria sobre #1 !');
   assert.equal(parseQuickAdd('   ', TODAY).title, '');
 });
@@ -262,4 +262,26 @@ test('espaços personalizados entram na contagem e na adição rápida', () => {
   assert.equal(counts.spaces.Estudos, 0);
   assert.equal(parseQuickAdd('Enviar proposta #trab', TODAY, names).category, 'Trabalho');
   assert.equal(parseQuickAdd('Enviar proposta #trab', TODAY).category, undefined, 'sem o espaço, o marcador fica no título');
+});
+
+test('urgente: !urgente marca a tarefa, sobe a prioridade e não fica no título', () => {
+  const parsed = parseQuickAdd('Entregar relatório !urgente', TODAY);
+  assert.equal(parsed.title, 'Entregar relatório');
+  assert.equal(parsed.urgent, true);
+  assert.equal(parsed.priority, 'high');
+  assert.equal(parseQuickAdd('Ler !baixa !urgente', TODAY).priority, 'low', 'prioridade explícita vence');
+});
+
+test('urgente: campo validado, contado e filtrado na aba Urgente', () => {
+  assert.equal(cleanTaskInput({ title: 'x', urgent: true }).urgent, true);
+  assert.equal(cleanTaskInput({ title: 'x', urgent: 'sim' }).urgent, false, 'só booleano verdadeiro conta');
+  assert.equal(normalizeTask('a', { title: 'x' }).urgent, false, 'tarefas antigas não são urgentes');
+  const tasks = [
+    normalizeTask('1', { title: 'Urgente aberta', urgent: true, dueDate: TODAY }),
+    normalizeTask('2', { title: 'Urgente feita', urgent: true, completed: true }),
+    normalizeTask('3', { title: 'Comum', dueDate: TODAY })
+  ];
+  assert.equal(countTasks(tasks, TODAY).urgent, 1);
+  const groups = groupTasks(tasks, { view: 'urgent', today: TODAY });
+  assert.deepEqual(groups.flatMap(group => group.tasks.map(task => task.id)), ['1']);
 });

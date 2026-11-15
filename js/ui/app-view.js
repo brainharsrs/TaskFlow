@@ -96,7 +96,9 @@ export function defaultsForContext() {
   return {
     dueDate: view === 'today' ? today : view === 'upcoming' ? addDays(today, 1) : null,
     category: space ?? spaceNames()[0],
-    priority: 'medium'
+    // Criada de dentro da aba Urgente, já nasce urgente.
+    priority: view === 'urgent' ? 'high' : 'medium',
+    urgent: view === 'urgent'
   };
 }
 
@@ -107,6 +109,7 @@ function renderQuickTokens() {
   if (parsed.dueDate) tokens.push(formatDue(parsed.dueDate, today));
   if (parsed.category) tokens.push(parsed.category);
   if (parsed.priority) tokens.push(`Prioridade ${PRIORITY_LABEL[parsed.priority].toLocaleLowerCase('pt-BR')}`);
+  if (parsed.urgent) tokens.push('Urgente');
   const box = byId('quickTokens');
   const current = [...box.children].map(child => child.textContent).join('|');
   if (current !== tokens.join('|')) box.replaceChildren(...tokens.map(text => h('span', { class: 'token' }, text)));
@@ -124,7 +127,8 @@ function submitQuickAdd(event) {
     notes: '',
     dueDate: parsed.dueDate !== undefined ? parsed.dueDate : defaults.dueDate,
     category: parsed.category ?? defaults.category,
-    priority: parsed.priority ?? defaults.priority
+    priority: parsed.priority ?? defaults.priority,
+    urgent: parsed.urgent ?? defaults.urgent
   });
   input.value = '';
   renderQuickTokens();
@@ -139,6 +143,7 @@ export function initAppView(handlers) {
   const setView = view => store.set({ view, query: '' });
   byId('viewNav').addEventListener('click', event => { const item = event.target.closest('[data-view]'); if (item) setView(item.dataset.view); });
   byId('tabbar').addEventListener('click', event => { const item = event.target.closest('[data-view]'); if (item) setView(item.dataset.view); });
+  byId('urgentBanner').addEventListener('click', () => store.set({ view: 'urgent', space: null, query: '' }));
 
   const toggleSpace = name => store.set(state => ({ space: state.space === name || !name ? null : name, view: state.view === 'report' ? 'all' : state.view }));
   const onSpaceClick = event => {
@@ -286,6 +291,11 @@ function renderNav(state, counts) {
     badge.textContent = counts[key] > 0 ? String(counts[key]) : '';
     if (key === 'today' && counts.overdue > 0) badge.dataset.tone = 'danger'; else delete badge.dataset.tone;
   }
+  // Aba "Urgente": só existe enquanto houver tarefa urgente em aberto. Quando a última é concluída,
+  // a aba some e, se a pessoa estava nela, volta para "Hoje".
+  const hasUrgent = counts.urgent > 0;
+  for (const element of $$('[data-urgent-entry]')) element.hidden = !hasUrgent || (element.id === 'urgentBanner' && state.view === 'urgent');
+  if (!hasUrgent && state.view === 'urgent' && state.tasksReady) queueMicrotask(() => store.set({ view: 'today' }));
   renderSpaces(state, counts);
   syncPills();
 }

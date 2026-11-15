@@ -9,7 +9,7 @@ import {
 import { db } from '../firebase.js';
 import { normalizeTask, cleanTaskInput, toISODate, addDays } from '../core/domain.js';
 
-const EDITABLE = ['title', 'notes', 'category', 'priority', 'dueDate', 'reminderTime', 'repeat'];
+const EDITABLE = ['title', 'notes', 'category', 'priority', 'dueDate', 'reminderTime', 'repeat', 'urgent'];
 const hasEditable = changes => EDITABLE.some(key => Object.hasOwn(changes, key));
 const editableOf = (task, changes) => cleanTaskInput(Object.fromEntries(EDITABLE.map(key => [key, Object.hasOwn(changes, key) ? changes[key] : task[key]])));
 

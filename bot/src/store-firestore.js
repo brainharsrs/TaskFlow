@@ -90,6 +90,11 @@ export function createFirestoreStore({ credentials }) {
       return [...DEFAULT_SPACES.map(space => space.name), ...custom];
     },
 
+    /** Mesmo formato do app (account-repo.js): { name, color, createdAt }. */
+    async createSpace(uid, { name, color }) {
+      await userRef(uid).collection('spaces').add({ name, color, createdAt: FieldValue.serverTimestamp() });
+    },
+
     /** Mesmo formato do app (task-repo.js), para passar pelas mesmas regras quando o app editar depois. */
     async createTask(uid, fields) {
       const ref = tasksRef(uid).doc();

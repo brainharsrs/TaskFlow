@@ -3,7 +3,7 @@
 process.env.TZ = 'America/Sao_Paulo';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTaskMessage, parseTimeWord, parseDateWord, spokenToShortcuts } from '../bot/src/parse-message.js';
+import { parseTaskMessage, parseTimeWord, parseDateWord, spokenToShortcuts, parseSpaceRequest, extractUrgency } from '../bot/src/parse-message.js';
 import {
   makeLinkCode, normalizeLinkCode, checkLinkCode, LINK_CODE_PATTERN, LINK_CODE_TTL_MS, LINK_CODE_ALPHABET
 } from '../js/core/telegram-link.js';
@@ -18,7 +18,7 @@ const at = (h, m = 0) => new Date(2026, 10, 15, h, m);
 // ---------- Parser ----------
 test('parser: exemplo do enunciado vira título, sexta 14h, Estudos, alta', () => {
   assert.deepEqual(parseTaskMessage('prova de história sexta 14h #estudos !alta', { now: NOW }), {
-    title: 'prova de história', dueDate: '2026-11-20', reminderTime: '14:00', category: 'Estudos', priority: 'high'
+    title: 'prova de história', dueDate: '2026-11-20', reminderTime: '14:00', category: 'Estudos', priority: 'high', urgent: false
   });
 });
 
@@ -240,7 +240,7 @@ const spoken = (text, options) => parseTaskMessage(spokenToShortcuts(text), { no
 
 test('fala: frase do enunciado dita em voz alta vira a mesma tarefa', () => {
   assert.deepEqual(spoken('Prova de História sexta-feira às duas da tarde, no espaço Estudos, prioridade alta.'), {
-    title: 'Prova de História', dueDate: '2026-11-20', reminderTime: '14:00', category: 'Estudos', priority: 'high'
+    title: 'Prova de História', dueDate: '2026-11-20', reminderTime: '14:00', category: 'Estudos', priority: 'high', urgent: false
   });
 });
 
@@ -254,7 +254,7 @@ test('fala: horários ditos de vários jeitos', () => {
 });
 
 test('fala: números e "as" comuns não viram horário', () => {
-  assert.deepEqual(spoken('Comprar 2 pães e 3 leites'), { title: 'Comprar 2 pães e 3 leites', dueDate: null, reminderTime: null, category: null, priority: null });
+  assert.deepEqual(spoken('Comprar 2 pães e 3 leites'), { title: 'Comprar 2 pães e 3 leites', dueDate: null, reminderTime: null, category: null, priority: null, urgent: false });
   const parsed = spoken('Estudar as duas matérias amanhã');
   assert.equal(parsed.title, 'Estudar as duas matérias');
   assert.equal(parsed.reminderTime, null);
@@ -313,7 +313,7 @@ test('bot: falha ou silêncio na transcrição não cria tarefa', async () => {
 test('relativo: "em 5 minutos" vira lembrete hoje, 5 min à frente', () => {
   const now = new Date(2026, 10, 15, 16, 57);
   assert.deepEqual(parseTaskMessage('PUBLICAR TASKFLOW EM 5 MINUTOS', { now }), {
-    title: 'PUBLICAR TASKFLOW', dueDate: '2026-11-15', reminderTime: '17:02', category: null, priority: null
+    title: 'PUBLICAR TASKFLOW', dueDate: '2026-11-15', reminderTime: '17:02', category: null, priority: null, urgent: false
   });
 });
 
@@ -342,4 +342,71 @@ test('relativo: funciona em áudio ("daqui a dez minutos")', () => {
   const parsed = parseTaskMessage(spokenToShortcuts('Lembrar de beber água daqui a dez minutos.'), { now });
   assert.equal(parsed.title, 'Lembrar de beber água');
   assert.equal(parsed.reminderTime, '17:07');
+});
+
+// ---------- Urgente e criação de espaços ----------
+test('urgência: palavras viram marca urgente, prioridade alta e saem do título', () => {
+  const now = new Date(2026, 10, 15, 17, 0);
+  assert.deepEqual(parseTaskMessage('PUBLICAR TASKFLOW EM 1 MINUTO URGENTEMENTE', { now }), {
+    title: 'PUBLICAR TASKFLOW', dueDate: '2026-11-15', reminderTime: '17:01', category: null, priority: 'high', urgent: true
+  });
+  assert.equal(parseTaskMessage('pagar boleto amanhã é urgente!', { now }).title, 'pagar boleto');
+  assert.equal(parseTaskMessage('ligar pro médico com urgência !baixa', { now }).priority, 'low', 'prioridade dita vence');
+  assert.equal(parseTaskMessage('ler livro', { now }).urgent, false);
+  assert.deepEqual(extractUrgency('revisar !urgente'), { text: 'revisar !urgente', urgent: false }, 'o atalho é tratado pelo parser do app');
+  assert.equal(parseTaskMessage('revisar !urgente', { now }).urgent, true);
+});
+
+test('espaço: pedidos em linguagem natural e por comando', () => {
+  assert.deepEqual(parseSpaceRequest('criar espaço Trabalho azul'), { name: 'Trabalho', color: 'sky' });
+  assert.deepEqual(parseSpaceRequest('/espaco Casa verde'), { name: 'Casa', color: 'mint' });
+  assert.deepEqual(parseSpaceRequest('cria uma aba chamada Academia'), { name: 'Academia', color: null });
+  assert.deepEqual(parseSpaceRequest('novo espaço Projetos da escola cor rosa'), { name: 'Projetos da escola', color: 'pink' });
+  assert.equal(parseSpaceRequest('criar espaço para estudar no quarto'), null, 'é tarefa');
+  assert.equal(parseSpaceRequest('comprar pão'), null);
+});
+
+function linkedBot() {
+  const store = createMemoryStore();
+  const sent = [];
+  const bot = createBot({ store, clock: () => NOW, send: async (chatId, text) => { sent.push(text); } });
+  store.addUser('ana');
+  store.addLinkCode('TASK2345', 'ana', NOW.getTime());
+  return { store, sent, bot, last: () => sent.at(-1) };
+}
+
+test('bot: tarefa urgente é gravada como urgente e a resposta avisa da aba', async () => {
+  const { store, bot, last } = linkedBot();
+  await bot.handleMessage({ chatId: '77', text: '/start TASK2345' });
+  await bot.handleMessage({ chatId: '77', text: 'PUBLICAR TASKFLOW EM 1 MINUTO URGENTEMENTE' });
+  const [task] = store.tasksOf('ana');
+  assert.equal(task.title, 'PUBLICAR TASKFLOW');
+  assert.equal(task.urgent, true);
+  assert.equal(task.priority, 'high');
+  assert.match(last(), /🚨 Urgente/);
+});
+
+test('bot: cria espaço por mensagem, recusa duplicado e explica a aba Urgente', async () => {
+  const { store, bot, last } = linkedBot();
+  await bot.handleMessage({ chatId: '77', text: '/start TASK2345' });
+  await bot.handleMessage({ chatId: '77', text: 'criar espaço Trabalho azul' });
+  assert.match(last(), /Espaço Trabalho criado \(azul\)/);
+  assert.match(last(), /#trabalho/);
+  assert.deepEqual(await store.listSpaceNames('ana'), ['Pessoal', 'Estudos', 'Projetos', 'Trabalho']);
+  await bot.handleMessage({ chatId: '77', text: '/espaco trabalho' });
+  assert.match(last(), /já tem um espaço/);
+  await bot.handleMessage({ chatId: '77', text: 'criar aba urgente' });
+  assert.match(last(), /automática/);
+  await bot.handleMessage({ chatId: '77', text: 'reunião amanhã 10h #trabalho' });
+  assert.equal(store.tasksOf('ana')[0].category, 'Trabalho', 'o novo espaço já vale nas mensagens');
+  assert.equal(store.tasksOf('ana').length, 1, 'pedidos de espaço não viram tarefa');
+});
+
+test('bot: resumo do dia mostra urgentes primeiro, com 🚨', () => {
+  const tasks = [
+    { title: 'Comum', category: 'Pessoal', priority: 'high', dueDate: '2026-11-15', completed: false, urgent: false },
+    { title: 'Pegando fogo', category: 'Pessoal', priority: 'medium', dueDate: '2026-11-15', completed: false, urgent: true }
+  ];
+  const text = dailySummaryText(tasks, new Date(2026, 10, 15, 7, 0));
+  assert.match(text, /Hoje \(2\):\n🚨 Pegando fogo/);
 });

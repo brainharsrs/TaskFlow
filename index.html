@@ -128,6 +128,7 @@
       <nav aria-label="Visões">
         <div class="nav" id="viewNav">
           <span class="nav-pill" aria-hidden="true"></span>
+          <button class="nav-item nav-urgent" type="button" data-view="urgent" data-urgent-entry hidden><span class="urgent-beacon" aria-hidden="true"></span>Urgente<span class="nav-count" data-count="urgent"></span></button>
           <button class="nav-item" type="button" data-view="today"><span data-icon="today"></span>Hoje<span class="nav-count" data-count="today"></span></button>
           <button class="nav-item" type="button" data-view="upcoming"><span data-icon="upcoming"></span>Próximas<span class="nav-count" data-count="upcoming"></span></button>
           <button class="nav-item" type="button" data-view="all"><span data-icon="all"></span>Todas<span class="nav-count" data-count="all"></span></button>
@@ -224,6 +225,7 @@
             </label>
             <div class="chips" id="spaceChips" role="group" aria-label="Filtrar por espaço"></div>
           </div>
+          <button class="urgent-banner" type="button" id="urgentBanner" data-urgent-entry hidden><span class="urgent-beacon" aria-hidden="true"></span><span>Tarefas urgentes: <b data-count="urgent"></b></span><span class="urgent-banner-go">Ver</span></button>
 
           <form class="quick-add" id="quickAdd" autocomplete="off">
             <span data-icon="plus"></span>
@@ -231,7 +233,7 @@
             <div class="quick-tokens" id="quickTokens" aria-live="polite"></div>
             <button class="btn btn-small" type="submit">Adicionar</button>
           </form>
-          <p class="hint" id="quickHint">Atalhos ao digitar: <b>@amanhã</b> ou <b>@sex</b> define o prazo, <b>#estudos</b> o espaço, <b>!alta</b> a prioridade.</p>
+          <p class="hint" id="quickHint">Atalhos ao digitar: <b>@amanhã</b> ou <b>@sex</b> define o prazo, <b>#estudos</b> o espaço, <b>!alta</b> a prioridade e <b>!urgente</b> cria a aba Urgente.</p>
 
           <div id="taskRegion">
             <div class="skeleton" id="taskSkeleton" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -319,6 +321,7 @@
             <label><input type="radio" name="priority" value="medium" checked />Média</label>
             <label><input type="radio" name="priority" value="high" />Alta</label>
           </div>
+          <label class="urgent-toggle"><input type="checkbox" id="taskUrgent" /><span class="urgent-toggle-text"><strong>Urgente</strong><small>Vai para a aba Urgente, com destaque vermelho</small></span></label>
         </fieldset>
       </div>
       <div class="sheet-foot">

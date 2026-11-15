@@ -94,6 +94,7 @@ export function normalizeTask(id, raw) {
     dueDate,
     reminderTime: dueDate && isTime(raw.reminderTime) ? raw.reminderTime : null,
     repeat: dueDate && REPEATS.includes(raw.repeat) ? raw.repeat : 'none',
+    urgent: raw.urgent === true,
     createdAt,
     updatedAt: toMillis(raw.updatedAt),
     completedAt: completed ? (toMillis(raw.completedAt) ?? toMillis(raw.updatedAt)) : null
@@ -117,7 +118,9 @@ export function cleanTaskInput(data) {
   if (dueDate !== null && !isISODate(dueDate)) throw new Error('task/invalid-date');
   if (reminderTime !== null && !isTime(reminderTime)) throw new Error('task/invalid-time');
   if (!REPEATS.includes(repeat)) throw new Error('task/invalid-repeat');
-  return { title, notes, category, priority, dueDate, reminderTime, repeat };
+  // Urgente é uma marca à parte do espaço: aparece na aba "Urgente" e no destaque vermelho.
+  const urgent = data.urgent === true;
+  return { title, notes, category, priority, dueDate, reminderTime, repeat, urgent };
 }
 
 /** Em qual grupo a tarefa aparece. */
@@ -133,7 +136,9 @@ export const VIEWS = {
   today: { label: 'Hoje', buckets: ['overdue', 'today'] },
   upcoming: { label: 'Próximas', buckets: ['upcoming', 'someday'] },
   all: { label: 'Todas', buckets: ['overdue', 'today', 'upcoming', 'someday'] },
-  done: { label: 'Concluídas', buckets: ['done'] }
+  done: { label: 'Concluídas', buckets: ['done'] },
+  // Só aparece na navegação quando há tarefa urgente em aberto.
+  urgent: { label: 'Urgente', buckets: ['overdue', 'today', 'upcoming', 'someday'], onlyUrgent: true }
 };
 
 const BUCKET_LABEL = { overdue: 'Atrasadas', today: 'Hoje', upcoming: 'Próximas', someday: 'Sem data', done: 'Concluídas' };
@@ -162,9 +167,11 @@ export function groupTasks(tasks, { view = 'today', space = null, query = '', so
   const searching = query.trim().length > 0;
   // Buscar atravessa as visões: quem procura quer achar, esteja a tarefa onde estiver.
   const buckets = searching ? ['overdue', 'today', 'upcoming', 'someday', 'done'] : VIEWS[view].buckets;
+  const onlyUrgent = !searching && VIEWS[view].onlyUrgent;
   const groups = new Map(buckets.map(key => [key, []]));
   for (const task of tasks) {
     if (space && task.category !== space) continue;
+    if (onlyUrgent && !task.urgent) continue;
     if (!matchesQuery(task, query)) continue;
     groups.get(bucketOf(task, today))?.push(task);
   }
@@ -179,11 +186,12 @@ export function groupTasks(tasks, { view = 'today', space = null, query = '', so
 
 /** Contagens usadas na navegação. */
 export function countTasks(tasks, today, spaceNames = SPACES) {
-  const counts = { today: 0, overdue: 0, upcoming: 0, all: 0, done: 0, spaces: Object.fromEntries(spaceNames.map(s => [s, 0])) };
+  const counts = { today: 0, overdue: 0, upcoming: 0, all: 0, done: 0, urgent: 0, spaces: Object.fromEntries(spaceNames.map(s => [s, 0])) };
   for (const task of tasks) {
     const bucket = bucketOf(task, today);
     if (bucket === 'done') { counts.done++; continue; }
     counts.all++;
+    if (task.urgent) counts.urgent++;
     counts.spaces[task.category] = (counts.spaces[task.category] ?? 0) + 1;
     if (bucket === 'overdue') { counts.overdue++; counts.today++; }
     else if (bucket === 'today') counts.today++;
@@ -242,10 +250,10 @@ export function computeStats(tasks, now = new Date()) {
 const WEEKDAYS = { dom: 0, domingo: 0, seg: 1, segunda: 1, ter: 2, terca: 2, qua: 3, quarta: 3, qui: 4, quinta: 4, sex: 5, sexta: 5, sab: 6, sabado: 6 };
 const PRIORITY_WORDS = { alta: 'high', media: 'medium', baixa: 'low' };
 
-/** Interpreta atalhos na adição rápida: "@amanhã", "@sex", "#estudos", "!alta".
+/** Interpreta atalhos na adição rápida: "@amanhã", "@sex", "#estudos", "!alta", "!urgente".
  *  Só marcadores explícitos são interpretados, para nunca mutilar um título comum. */
 export function parseQuickAdd(text, today, spaceNames = SPACES) {
-  const result = { title: '', dueDate: undefined, category: undefined, priority: undefined };
+  const result = { title: '', dueDate: undefined, category: undefined, priority: undefined, urgent: undefined };
   const words = [];
   for (const word of text.trim().split(/\s+/)) {
     const key = normalizeText(word.slice(1));
@@ -264,6 +272,8 @@ export function parseQuickAdd(text, today, spaceNames = SPACES) {
       if (space) { result.category = space; continue; }
     }
     if (word.startsWith('!') && key in PRIORITY_WORDS) { result.priority = PRIORITY_WORDS[key]; continue; }
+    // "!urgente": marca a tarefa como urgente e, se a prioridade não foi dada, sobe para alta.
+    if (word.startsWith('!') && (key === 'urgente' || key === 'urgencia')) { result.urgent = true; result.priority ??= 'high'; continue; }
     words.push(word);
   }
   result.title = words.join(' ');

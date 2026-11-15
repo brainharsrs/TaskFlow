@@ -20,6 +20,7 @@ function metaItems(task, today) {
       const label = formatDue(task.dueDate, today);
       items.push(h('span', { dataset: tone ? { tone } : {} }, overdue ? `Atrasada · ${label.toLocaleLowerCase('pt-BR')}` : label));
     }
+    if (task.urgent) items.push(h('span', { class: 'urgent-chip', dataset: { tone: 'urgent' } }, 'Urgente'));
     if (task.reminderTime) items.push(h('span', { html: ICONS.clock }, `Lembrete às ${task.reminderTime}`));
     if (task.repeat !== 'none') items.push(h('span', { html: ICONS.repeat }, REPEAT_LABEL[task.repeat]));
     if (task.status === 'inProgress') items.push(h('span', { dataset: { tone: 'focus' } }, 'Em foco'));
@@ -32,7 +33,7 @@ function metaItems(task, today) {
 function fillRow(row, task, today) {
   const focused = task.status === 'inProgress';
   row.className = 'task';
-  Object.assign(row.dataset, { priority: task.priority, done: String(task.completed), focus: String(focused) });
+  Object.assign(row.dataset, { priority: task.priority, done: String(task.completed), focus: String(focused), urgent: String(task.urgent && !task.completed) });
   row.replaceChildren(
     h('button', {
       class: 'task-check', type: 'button', dataset: { action: 'toggle' }, 'aria-pressed': String(task.completed),
@@ -71,7 +72,8 @@ const EMPTY = {
   today: ['Nada para hoje', 'Seu dia está livre. Adicione uma tarefa ou adiante uma das próximas.'],
   upcoming: ['Nenhuma tarefa adiante', 'Tarefas com prazo futuro ou sem data aparecem aqui.'],
   all: ['Tudo em dia', 'Não há tarefas em aberto. Capture a próxima quando ela aparecer.'],
-  done: ['Nada concluído ainda', 'As tarefas que você concluir ficam guardadas aqui.']
+  done: ['Nada concluído ainda', 'As tarefas que você concluir ficam guardadas aqui.'],
+  urgent: ['Nada urgente', 'Quando não há tarefa urgente em aberto, esta aba some sozinha.']
 };
 
 function renderEmpty({ view, space, query, total }) {
@@ -86,7 +88,7 @@ function renderEmpty({ view, space, query, total }) {
     text = 'Escreva no campo acima e pressione Enter. Use @amanhã para o prazo e #estudos para o espaço.';
     action = h('button', { class: 'btn btn-primary', type: 'button', onclick: () => handlers.onNew() }, 'Criar primeira tarefa');
   } else {
-    [title, text] = EMPTY[view];
+    [title, text] = EMPTY[view] ?? EMPTY.all;
     if (space) text = `Nada em ${space} nesta visão.`;
     action = space
       ? h('button', { class: 'btn', type: 'button', onclick: () => handlers.onClearSpace() }, 'Ver todos os espaços')
@@ -120,7 +122,7 @@ export function renderTaskList(groups, { today, mode, ready, context, colorOf: r
     }
     for (const task of group.tasks) {
       tasksById.set(task.id, task);
-      const signature = [task.title, task.category, colorOf(task.category), task.priority, task.status, task.dueDate, task.reminderTime, task.repeat, task.completedAt, Boolean(task.notes), today].join('|');
+      const signature = [task.title, task.category, colorOf(task.category), task.priority, task.status, task.dueDate, task.reminderTime, task.repeat, task.urgent, task.completedAt, Boolean(task.notes), today].join('|');
       nodes.push(rowFor(task.id, signature, row => fillRow(row, task, today)));
     }
   }

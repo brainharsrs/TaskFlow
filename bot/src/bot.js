@@ -2,12 +2,13 @@
 // recebe um `store` (dados) e uma função `send(chatId, text)` (saída). Assim dá para testar
 // tudo em memória e, no futuro, ligar o mesmo núcleo ao WhatsApp.
 import {
-  cleanTaskInput, toISODate, formatDue, bucketOf, dueReminders, reminderKey, PRIORITY_LABEL
+  cleanTaskInput, cleanSpaceName, toISODate, formatDue, bucketOf, dueReminders, reminderKey, PRIORITY_LABEL,
+  SPACE_COLORS, normalizeText
 } from '../../js/core/domain.js';
 
 const PRIORITY_WEIGHT_ORDER = { high: 0, medium: 1, low: 2 };
 import { normalizeLinkCode } from '../../js/core/telegram-link.js';
-import { parseTaskMessage, spokenToShortcuts } from './parse-message.js';
+import { parseTaskMessage, spokenToShortcuts, parseSpaceRequest } from './parse-message.js';
 
 /** Durante o beta o Pro é grátis para todos. Mesma chave de js/config.js e firestore.rules. */
 export const PRO_FREE_BETA = true;
@@ -26,11 +27,14 @@ const HELP = [
   '• comprar pão amanhã',
   '• entregar trabalho 25/11 #projetos',
   '• ou mande um ÁUDIO: "prova de história sexta às duas da tarde, no espaço estudos"',
+  '• urgente: "pagar boleto hoje URGENTE" cria a aba 🚨 Urgente no site',
+  '• nova aba: "criar espaço Trabalho azul" (cores: roxo, azul, amarelo, verde, vermelho, rosa)',
   '',
-  'Atalhos: data (hoje, amanhã, sexta, 25/11 ou @sex), horário (14h, 9:30), tempo (em 30 minutos, daqui a 2 horas, em 3 dias), #espaço e !alta / !media / !baixa.',
+  'Atalhos: data (hoje, amanhã, sexta, 25/11 ou @sex), horário (14h, 9:30), tempo (em 30 minutos, daqui a 2 horas, em 3 dias), #espaço, !alta / !media / !baixa e !urgente.',
   '',
   'Comandos:',
   '/hoje — tarefas de hoje e atrasadas',
+  '/espaco Nome cor — cria um espaço (aba) no site',
   '/desvincular — desliga este chat da sua conta',
   '/ajuda — esta mensagem'
 ].join('\n');
@@ -48,6 +52,8 @@ const LINK_REPLY = {
 };
 
 const pad = n => String(n).padStart(2, '0');
+const COLOR_LABEL = { violet: 'roxo', sky: 'azul', amber: 'amarelo', mint: 'verde', coral: 'vermelho', pink: 'rosa' };
+const hashtagOf = name => `#${normalizeText(name).replace(/\s+/g, '')}`;
 const clockOf = date => `${pad(date.getHours())}:${pad(date.getMinutes())}`;
 const minutesOf = time => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
 
@@ -58,13 +64,13 @@ export function taskLine(task, today) {
   if (task.reminderTime) bits.push(task.reminderTime);
   bits.push(task.category);
   if (task.priority !== 'medium') bits.push(PRIORITY_LABEL[task.priority]);
-  return `• ${task.title} — ${bits.join(' · ')}`;
+  return `${task.urgent ? '🚨' : '•'} ${task.title} — ${bits.join(' · ')}`;
 }
 
 /** Texto do resumo diário. Devolve null quando não há nada em aberto para hoje nem atrasado. */
 export function dailySummaryText(tasks, now, { force = false } = {}) {
   const today = toISODate(now);
-  const sort = (a, b) => PRIORITY_WEIGHT_ORDER[a.priority] - PRIORITY_WEIGHT_ORDER[b.priority]
+  const sort = (a, b) => Number(b.urgent) - Number(a.urgent) || PRIORITY_WEIGHT_ORDER[a.priority] - PRIORITY_WEIGHT_ORDER[b.priority]
     || (a.reminderTime ?? '99:99').localeCompare(b.reminderTime ?? '99:99');
   const open = tasks.filter(task => !task.completed);
   const overdue = open.filter(task => bucketOf(task, today) === 'overdue').sort(sort);
@@ -120,7 +126,8 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
         category: parsed.category ?? 'Pessoal',
         priority: parsed.priority ?? 'medium',
         dueDate: parsed.dueDate,
-        reminderTime: isPro(user) ? parsed.reminderTime : null
+        reminderTime: isPro(user) ? parsed.reminderTime : null,
+        urgent: parsed.urgent
       });
     } catch (error) {
       const reasons = { 'task/invalid-title': 'O nome da tarefa pode ter até 120 caracteres.' };
@@ -131,7 +138,32 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
     const when = fields.dueDate ? formatDue(fields.dueDate, today) + (fields.reminderTime ? `, ${fields.reminderTime}` : '') : 'sem prazo';
     const extra = !isPro(user) && parsed.reminderTime ? '\n(Lembrete com horário é do plano Pro.)' : '';
     const heard = spoken ? `🎙️ Entendi: “${text}”\n` : '';
-    return send(chatId, `${heard}✅ Tarefa criada: ${fields.title}\n📅 ${when} · ${fields.category} · ${PRIORITY_LABEL[fields.priority]}${extra}`);
+    const urgentLine = fields.urgent ? '\n🚨 Urgente: aparece na aba Urgente do site, em destaque vermelho.' : '';
+    return send(chatId, `${heard}✅ Tarefa criada: ${fields.title}\n📅 ${when} · ${fields.category} · ${PRIORITY_LABEL[fields.priority]}${urgentLine}${extra}`);
+  }
+
+  /** "criar espaço Trabalho azul" ou "/espaco Casa verde": cria um espaço (aba) na conta. */
+  async function createSpace(chatId, uid, request) {
+    if (!request.name) return send(chatId, 'Qual o nome do espaço? Exemplo: "criar espaço Trabalho azul".');
+    if (['urgente', 'urgentes'].includes(normalizeText(request.name))) {
+      return send(chatId, 'A aba 🚨 Urgente é automática: ela aparece no site assim que uma tarefa é marcada como urgente (ex.: "pagar boleto hoje URGENTE") e some quando não há mais nenhuma.');
+    }
+    const user = await store.getUser(uid);
+    if (!isPro(user)) return send(chatId, 'Espaços personalizados fazem parte do plano Pro.');
+    const existing = await store.listSpaceNames(uid);
+    let name;
+    try {
+      name = cleanSpaceName(request.name, existing);
+    } catch (error) {
+      const reasons = {
+        'space/duplicate': `Você já tem um espaço chamado ${request.name}. Use ${hashtagOf(request.name)} nas mensagens.`,
+        'space/invalid-name': 'O nome do espaço pode ter até 24 caracteres.'
+      };
+      return send(chatId, reasons[error.message] ?? 'Não consegui criar esse espaço.');
+    }
+    const color = SPACE_COLORS.includes(request.color) ? request.color : SPACE_COLORS[existing.length % SPACE_COLORS.length];
+    await store.createSpace(uid, { name, color });
+    return send(chatId, `📁 Espaço ${name} criado (${COLOR_LABEL[color]}). Ele já aparece no site.\nPara mandar tarefas para ele, use ${hashtagOf(name)} — ex.: "reunião amanhã 10h ${hashtagOf(name)}".`);
   }
 
   async function handleAudio(chatId, audio) {
@@ -173,11 +205,16 @@ export function createBot({ store, send, clock = () => new Date(), log = () => {
       await store.unlinkChat(uid, chatId);
       return send(chatId, 'Chat desvinculado. Suas tarefas continuam no TaskFlow. Para voltar, gere um novo código no app.');
     }
+    if (command === 'espaco' || command === 'espaço' || command === 'aba') {
+      return createSpace(chatId, uid, parseSpaceRequest(body) ?? { name: argument, color: null });
+    }
     if (command === 'hoje') {
       const tasks = await store.listOpenTasks(uid);
       return send(chatId, dailySummaryText(tasks, clock(), { force: true }));
     }
     if (command) return send(chatId, `Não conheço o comando /${command}.\n\n${HELP}`);
+    const spaceRequest = parseSpaceRequest(body);
+    if (spaceRequest) return createSpace(chatId, uid, spaceRequest);
     return createTask(chatId, uid, body);
   }
 

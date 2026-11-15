@@ -79,6 +79,7 @@ export function openTaskSheet({ task = null, defaults = {} } = {}) {
   renderSpaceChoices(spaces, source.category);
   form().elements.repeat.value = source.repeat ?? 'none';
   form().elements.priority.value = source.priority;
+  byId('taskUrgent').checked = source.urgent === true;
   syncDueChips();
 
   const sheet = dialog();
@@ -110,7 +111,8 @@ function submit(event) {
     reminderTime: dueDate ? (byId('taskRemind').value || null) : null,
     repeat: dueDate ? form().elements.repeat.value : 'none',
     category: form().elements.category.value,
-    priority: form().elements.priority.value
+    priority: form().elements.priority.value,
+    urgent: byId('taskUrgent').checked
   };
   if (editing) callbacks.onUpdate(editing, input);
   else callbacks.onCreate(input);

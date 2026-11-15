@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// TaskFlow — regras do Cloud Firestore (versão 4: tarefas, plano, espaços, promoção e assistente do Telegram).
+// TaskFlow — regras do Cloud Firestore (versão 5: tarefas, plano, espaços, promoção, assistente do Telegram e tarefas urgentes).
 // ATENÇÃO: editar este arquivo NÃO altera o banco. As regras só valem depois de publicadas
 // (Firebase Console → Firestore Database → Regras → Publicar, ou `firebase deploy --only firestore:rules`).
 // Passo a passo em docs/FIREBASE.md.
@@ -28,7 +28,7 @@ service cloud.firestore {
     function validTask(data, userId) {
       return data.keys().hasOnly([
           'title', 'notes', 'category', 'priority', 'status', 'completed',
-          'dueDate', 'reminderTime', 'repeat', 'completedAt', 'createdAt', 'updatedAt',
+          'dueDate', 'reminderTime', 'repeat', 'urgent', 'completedAt', 'createdAt', 'updatedAt',
           'date' // campo legado da versão 1 (prazo como texto); aceito só para compatibilidade
         ])
         && data.keys().hasAll([
@@ -53,6 +53,8 @@ service cloud.firestore {
             || (data.reminderTime is string && data.reminderTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') && isPro(userId)))
         && (!('repeat' in data) || data.repeat == 'none'
             || (data.repeat in ['daily', 'weekly', 'monthly'] && isPro(userId)))
+        // Urgente: marca opcional (aba "Urgente" no app). Só booleano.
+        && (!('urgent' in data) || data.urgent is bool)
         && (!('completedAt' in data) || data.completedAt == null || data.completedAt is timestamp)
         && (!('date' in data) || (data.date is string && data.date.size() <= 40))
         && data.createdAt is timestamp

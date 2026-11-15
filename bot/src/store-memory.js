@@ -47,6 +47,7 @@ export function createMemoryStore() {
     async unlinkChat(uid, chatId) { userOf(uid).telegram = null; chats.delete(chatId); },
     async getUser(uid) { const { plan, telegram } = userOf(uid); return { plan, telegram }; },
     async listSpaceNames(uid) { return [...DEFAULT_SPACES.map(s => s.name), ...userOf(uid).spaces]; },
+    async createSpace(uid, { name }) { userOf(uid).spaces.push(name); },
     async createTask(uid, fields) {
       const now = Date.now();
       return this.putTask(uid, { ...fields, notes: '', status: 'pending', completed: false, completedAt: null, createdAt: now, updatedAt: now });

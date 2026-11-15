@@ -1,5 +1,19 @@
 # Registro de alterações
 
+## 2.6.0 — 15/11/2026
+
+### Requer ação sua
+- Publicar as regras do Firestore (versão 5: campo `urgent`) **antes** de atualizar o bot, e publicar o site.
+
+### Urgente
+- Tarefa pode ser marcada como **urgente**: no site (botão no formulário ou `!urgente` na adição rápida) ou no bot ("URGENTE", "urgentemente", "com urgência").
+- A aba **🚨 Urgente** só aparece enquanto houver tarefa urgente aberta, com destaque vermelho pulsando devagar (parado para quem prefere menos movimento) e some sozinha quando a última é concluída. No celular, vira uma faixa acima da lista.
+- Urgentes aparecem primeiro, com 🚨, no resumo diário do bot.
+
+### Assistente no Telegram
+- Cria **espaços (abas)** por mensagem: "criar espaço Trabalho azul" ou `/espaco Casa verde`.
+- Entende tempo relativo: "em 5 minutos", "daqui a 2 horas", "em 3 dias".
+
 ## 2.5.0 — 15/11/2026
 
 ### Assistente no Telegram

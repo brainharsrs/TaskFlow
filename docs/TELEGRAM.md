@@ -7,6 +7,9 @@ O diferencial do plano Pro: a pessoa conversa com um bot do TaskFlow no Telegram
 - **Lembretes**: o horário de cada tarefa chega como mensagem.
 - Comandos: `/hoje`, `/ajuda`, `/desvincular`.
 
+- **Urgente**: "pagar boleto hoje URGENTE" (ou "com urgência", "!urgente") marca a tarefa como urgente e prioridade alta; no site aparece a aba 🚨 Urgente, que some quando não há mais urgentes.
+- **Criar espaços (abas)**: "criar espaço Trabalho azul" ou `/espaco Casa verde` (cores: roxo, azul, amarelo, verde, vermelho, rosa). Depois use `#trabalho` nas mensagens.
+- **Tempo relativo**: "em 5 minutos", "daqui a 2 horas", "em 3 dias".
 - **Áudio vira tarefa**: mande uma mensagem de voz ("prova de história sexta às duas da tarde, no espaço estudos, prioridade alta"). O bot responde com o que entendeu e cria a tarefa.
 
 Durante o beta, tudo isso é **grátis para todas as contas** ("Pro grátis durante o beta"). Depois, o mesmo núcleo (`bot/src/bot.js`) pode ser ligado ao WhatsApp (API oficial da Meta).
