@@ -1,39 +1,105 @@
 rules_version = '2';
 
+// TaskFlow — regras do Cloud Firestore (versão 3: tarefas, plano, espaços e promoção).
+// ATENÇÃO: editar este arquivo NÃO altera o banco. As regras só valem depois de publicadas
+// (Firebase Console → Firestore Database → Regras → Publicar, ou `firebase deploy --only firestore:rules`).
+// Passo a passo em docs/FIREBASE.md.
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Cada pessoa só enxerga e altera o que está sob o próprio uid.
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    function validTask(data) {
+    // Plano Pro: lido do documento users/{uid}, que o cliente NÃO consegue escrever.
+    function isPro(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.plan == 'pro';
+    }
+
+    function validTask(data, userId) {
       return data.keys().hasOnly([
-          'title', 'category', 'priority', 'status', 'completed',
-          'date', 'createdAt', 'updatedAt'
+          'title', 'notes', 'category', 'priority', 'status', 'completed',
+          'dueDate', 'reminderTime', 'repeat', 'completedAt', 'createdAt', 'updatedAt',
+          'date' // campo legado da versão 1 (prazo como texto); aceito só para compatibilidade
         ])
         && data.keys().hasAll([
-          'title', 'category', 'priority', 'status', 'completed',
-          'date', 'createdAt', 'updatedAt'
+          'title', 'category', 'priority', 'status', 'completed', 'createdAt', 'updatedAt'
         ])
         && data.title is string
         && data.title.size() > 0
-        && data.title.size() <= 90
-        && data.category in ['Pessoal', 'Estudos', 'Projetos']
+        && data.title.size() <= 120
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000))
+        && data.category is string
+        && data.category.size() > 0
+        && data.category.size() <= 24
         && data.priority in ['low', 'medium', 'high']
         && data.status in ['pending', 'inProgress', 'completed']
         && data.completed is bool
-        && data.date is string
+        // Os dois campos de conclusão nunca podem se contradizer.
+        && data.completed == (data.status == 'completed')
+        && (!('dueDate' in data) || data.dueDate == null
+            || (data.dueDate is string && data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+        // Lembrete com horário e repetição são recursos do plano Pro.
+        && (!('reminderTime' in data) || data.reminderTime == null
+            || (data.reminderTime is string && data.reminderTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$') && isPro(userId)))
+        && (!('repeat' in data) || data.repeat == 'none'
+            || (data.repeat in ['daily', 'weekly', 'monthly'] && isPro(userId)))
+        && (!('completedAt' in data) || data.completedAt == null || data.completedAt is timestamp)
+        && (!('date' in data) || (data.date is string && data.date.size() <= 40))
         && data.createdAt is timestamp
         && data.updatedAt is timestamp;
     }
 
+    // Perfil da conta: guarda o plano. Só leitura para o dono; ninguém escreve pelo cliente.
+    // O campo `plan` é definido por você no Console (ou, no futuro, por um webhook em Cloud Functions,
+    // que usa o Admin SDK e não passa por estas regras).
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list, write: if false;
+    }
+
     match /users/{userId}/tasks/{taskId} {
       allow read: if isOwner(userId);
-      allow create: if isOwner(userId) && validTask(request.resource.data);
+
+      // As datas vêm do relógio do servidor: o cliente não pode forjar quando criou ou alterou.
+      allow create: if isOwner(userId)
+                    && validTask(request.resource.data, userId)
+                    && request.resource.data.createdAt == request.time
+                    && request.resource.data.updatedAt == request.time;
+
       allow update: if isOwner(userId)
-                    && validTask(request.resource.data)
-                    && request.resource.data.createdAt == resource.data.createdAt;
+                    && validTask(request.resource.data, userId)
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && request.resource.data.updatedAt == request.time;
+
       allow delete: if isOwner(userId);
     }
+
+    // Espaços personalizados: criar exige plano Pro; ler e excluir, só ser o dono
+    // (quem deixa o Pro continua vendo e podendo apagar os espaços que criou).
+    match /users/{userId}/spaces/{spaceId} {
+      allow read, delete: if isOwner(userId);
+      allow create: if isOwner(userId)
+                    && isPro(userId)
+                    && request.resource.data.keys().hasOnly(['name', 'color', 'createdAt'])
+                    && request.resource.data.keys().hasAll(['name', 'color', 'createdAt'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() > 0
+                    && request.resource.data.name.size() <= 24
+                    && request.resource.data.color in ['violet', 'sky', 'amber', 'mint', 'coral', 'pink']
+                    && request.resource.data.createdAt == request.time;
+      allow update: if false;
+    }
+
+    // Promoção vigente: conteúdo público de divulgação, escrito só por você no Console.
+    match /public/{docId} {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    // Qualquer outro caminho é negado por padrão.
   }
 }

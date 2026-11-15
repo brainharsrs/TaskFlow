@@ -1,0 +1,30 @@
+/*
+ * TaskFlow — LOGO ORIGINAL. NÃO EDITAR.
+ *
+ * Estas regras foram copiadas, valor por valor, do CSS original do projeto
+ * (css/styles.css do commit 454d8cb). A aparência da marca é inegociável:
+ * símbolo, gradiente, proporções, tipografia e cores ficam exatamente assim.
+ * As variáveis originais (--text, --display, --violet) foram substituídas
+ * pelos seus valores literais para que a logo não dependa do tema.
+ *
+ * Markup obrigatório (idêntico ao original):
+ *   <a class="brand" ...>
+ *     <span class="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true">
+ *       <path d="M8 21.5 16 29l16-18"/><path d="M7 11h12"/></svg></span>
+ *     <span>task<span class="brand-light">flow</span><i>.</i></span>
+ *   </a>
+ *
+ * O que PODE mudar fora deste arquivo: posição, margens e contexto.
+ */
+.brand{display:inline-flex;align-items:center;gap:11px;text-decoration:none;color:#f3f4fb;font-family:'Space Grotesk',sans-serif;font-size:23px;letter-spacing:-1.2px;font-weight:700}
+.brand-light{color:#b4a2ff;font-weight:500}
+.brand i{font-style:normal;color:#a58bff}
+.brand-mark{width:37px;height:37px;border-radius:12px;background:linear-gradient(145deg,#b5a4ff,#7757f4 65%,#5335cc);display:grid;place-items:center;box-shadow:0 7px 26px #7858f34a;position:relative;overflow:hidden}
+.brand-mark:after{content:"";position:absolute;inset:1px;border:1px solid #ffffff3a;border-radius:11px}
+.brand-mark svg{width:30px;height:30px;fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.brand-large{font-size:26px}
+.brand-large .brand-mark{width:43px;height:43px;border-radius:14px}
+.brand-large .brand-mark svg{width:34px;height:34px}
+.sidebar-brand{font-size:21px}
+.sidebar-brand .brand-mark{height:33px;width:33px;border-radius:10px}
+.sidebar-brand .brand-mark svg{width:26px;height:26px}

@@ -1,47 +1,65 @@
-# TaskFlow — Gerenciador de Tarefas
+# TaskFlow
 
-O TaskFlow é uma aplicação web de produtividade desenvolvida com HTML, CSS, JavaScript e Firebase. O projeto permite que usuários organizem suas tarefas em uma interface moderna e responsiva.
+Gestor de tarefas pessoal: capture em segundos, veja só o que importa hoje e acompanhe o seu ritmo na semana. Web estático com Firebase Authentication, Cloud Firestore e Firebase Hosting.
 
-## Funcionalidades
+**Aplicação:** <https://taskflow-br.web.app/> · **Repositório:** <https://github.com/brainharsrs/TaskFlow>
 
-- Cadastro e login com e-mail e senha.
-- Logout e recuperação de senha.
-- Criação, listagem, edição e exclusão de tarefas.
-- Marcação de tarefas como concluídas e reabertura.
-- Armazenamento persistente no Cloud Firestore.
-- Separação das tarefas por usuário autenticado.
-- Interface responsiva.
-- Hospedagem com Firebase Hosting.
+> A versão 2 deste repositório ainda **não foi publicada**. Antes: publicar as regras do Firestore ([docs/FIREBASE.md](docs/FIREBASE.md)) e, para cobrar, configurar o link da Stripe ([docs/PAGAMENTOS.md](docs/PAGAMENTOS.md)).
 
-## Tecnologias utilizadas
+## O que o app faz
 
-- HTML5
-- CSS3
-- JavaScript
-- Firebase Authentication
-- Cloud Firestore
-- Firebase Hosting
-- Git e GitHub
+- Conta por e-mail e senha, **Google**, **link por e-mail (sem senha)** e Apple (opcional); redefinir senha e alterar o nome.
+- "Explorar sem conta": demonstração completa com dados que vivem só na aba.
+- Tarefas com título, notas, prazo, espaço (Pessoal, Estudos, Projetos) e prioridade.
+- Visões **Hoje**, **Próximas**, **Todas** e **Concluídas**, com atrasadas em destaque.
+- Adição rápida com atalhos: `Entregar relatório @sex #estudos !alta`.
+- Foco em uma tarefa, busca sem acentos, ordenação e filtro por espaço.
+- Indicadores reais: progresso de hoje, concluídas nos últimos 7 dias e sequência de dias.
+- Desfazer ao concluir e ao excluir.
+- Central de notificações e notificações do navegador (resumo do dia e lembretes).
+- Plano **Pro** (R$ 9,90 por mês, via Stripe): espaços personalizados, lembretes com horário, tarefas recorrentes e relatório de 30 dias.
+- Promoções anunciadas no app e aplicadas por cupom no checkout.
+- Funciona offline; as alterações sobem quando a conexão volta.
+- Desktop, tablet e celular (barra inferior e sheet arrastável), teclado e leitores de tela.
 
-## Como executar localmente
+Atalhos: `Ctrl/⌘ K` busca · `N` nova tarefa · `/` adição rápida · `Ctrl/⌘ Enter` salva o formulário.
 
-1. Clone o repositório.
-2. Abra a pasta do projeto no Visual Studio Code.
-3. Configure o Firebase no arquivo `js/firebase.js`, usando os dados do seu próprio projeto.
-4. Habilite a autenticação por e-mail e senha no Firebase Authentication.
-5. Configure o Cloud Firestore e publique as regras de segurança documentadas no projeto.
-6. Execute `index.html` por meio de um servidor local, como a extensão Live Server.
+## Executar localmente
+
+Não há etapa de build nem dependências para instalar.
+
+```bash
+npx serve .
+```
+
+Abra o endereço indicado. Para testar sem conta, use **Explorar sem conta**. Para usar sua conta, o projeto Firebase precisa estar com o provedor E-mail/senha ativo e as regras de [`firestore.rules`](firestore.rules) publicadas.
+
+```bash
+npm test
+```
+
+Roda os 22 testes das regras de domínio (Node 20 ou mais recente).
+
+## Documentação
+
+| Documento | Conteúdo |
+|-----------|----------|
+| [docs/FIREBASE.md](docs/FIREBASE.md) | **Ações pendentes no Firebase Console**, plano de migração e o que não foi verificado |
+| [docs/LOGIN.md](docs/LOGIN.md) | Como ativar Google, link por e-mail e Apple no Firebase Console |
+| [docs/PAGAMENTOS.md](docs/PAGAMENTOS.md) | Stripe, liberação do plano Pro, promoções, e-mails de pagamento e limites do modelo atual |
+| [docs/DESIGN.md](docs/DESIGN.md) | Direção criativa, paletas comparadas, tokens, vidro e movimento |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Camadas, fluxo de dados, decisões técnicas e segurança |
+| [CHANGELOG.md](CHANGELOG.md) | Registro das alterações |
 
 ## Segurança
 
-As regras do Firestore devem permitir que cada usuário acesse somente os dados associados à sua própria conta. Não inclua credenciais administrativas ou chaves privadas no código cliente.
+Cada pessoa só acessa `users/{seu uid}/tasks`. As regras validam campos, tipos, tamanhos e datas no servidor. Os valores em `js/firebase.js` são identificadores públicos do app Web, não credenciais; chaves de conta de serviço e tokens de administrador nunca devem entrar no repositório.
 
-## Demonstração online
+## Tecnologias
 
-**Aplicação:** (https://taskflow-br.web.app/)
-
-**Repositório:** (https://github.com/brainharsrs/TaskFlow)
+HTML, CSS e JavaScript (módulos ES nativos) · Firebase Authentication · Cloud Firestore · Firebase Hosting.
 
 ## Autor
+
 Bryan Gabriel Botelho de Oliveira.
-Projeto acadêmico desenvolvido para praticar integração entre front-end, autenticação, banco de dados e hospedagem em nuvem.
+Nasceu como projeto acadêmico para praticar integração entre front-end, autenticação, banco de dados e hospedagem em nuvem; a versão 2 o evolui como produto.

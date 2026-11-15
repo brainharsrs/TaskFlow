@@ -1,0 +1,115 @@
+/* TaskFlow — design tokens. Direção "Tinta & Lima".
+   Chrome acromático; o lima (complementar do violeta da logo) é o único acento de ação.
+   O violeta pertence à logo e à luz ambiente atrás do vidro — nunca a botões ou texto. */
+:root {
+  color-scheme: dark;
+
+  /* Fundo e superfícies: degraus de tom, sem linhas */
+  --ink-0: #0a0a0c;
+  --ink-1: #111114;
+  --ink-2: #18181c;
+  --ink-3: #212126;
+  --ink-4: #2c2c33;
+
+  /* Texto */
+  --text: #f4f4f1;
+  --text-2: #b4b4bc;
+  --text-3: #85858f;
+
+  /* Acento */
+  --lime: #c8f751;
+  --lime-strong: #d8ff6e;
+  --on-lime: #141a00;
+  --lime-wash: rgb(200 247 81 / 0.12);
+
+  /* Marca (apenas luz ambiente e espaço "Pessoal") */
+  --violet: #a58bff;
+  --violet-deep: #7757f4;
+
+  /* Estados */
+  --success: #5fd9a0;
+  --warning: #f7b955;
+  --danger: #ff6b6b;
+  --info: #6cc4f5;
+  --pink: #f28ac4;
+  --danger-wash: rgb(255 107 107 / 0.12);
+  --warning-wash: rgb(247 185 85 / 0.12);
+
+  /* Bordas e transparências */
+  --line: rgb(255 255 255 / 0.07);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --scrim: rgb(5 5 7 / 0.62);
+
+  /* Vidro */
+  --glass-fill: rgb(22 22 27 / 0.58);
+  --glass-fill-strong: rgb(24 24 30 / 0.78);
+  --glass-blur: blur(26px) saturate(175%);
+  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.13), inset 0 -1px 0 rgb(0 0 0 / 0.25);
+  --glass-line: rgb(255 255 255 / 0.09);
+
+  /* Gradientes (só luz ambiente e brilho do vidro) */
+  --ambient-violet: radial-gradient(closest-side, rgb(119 87 244 / 0.34), transparent);
+  --ambient-lime: radial-gradient(closest-side, rgb(200 247 81 / 0.13), transparent);
+  --sheen: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / 0.075), transparent 60%);
+
+  /* Sombras: só no que realmente flutua */
+  --shadow-float: 0 24px 60px -18px rgb(0 0 0 / 0.7), 0 2px 8px rgb(0 0 0 / 0.3);
+  --shadow-pop: 0 14px 34px -12px rgb(0 0 0 / 0.75);
+
+  /* Tipografia */
+  --font: 'Geist', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-xs: 0.8125rem;   /* 13 */
+  --fs-sm: 0.875rem;    /* 14 */
+  --fs-md: 0.9375rem;   /* 15 */
+  --fs-lg: 1.125rem;    /* 18 */
+  --fs-xl: 1.5rem;      /* 24 */
+  --fs-2xl: 2rem;       /* 32 */
+  --fs-3xl: clamp(2.5rem, 5.2vw, 4.25rem);
+
+  /* Espaço (base 4) */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 20px; --s6: 24px; --s8: 32px; --s10: 40px; --s12: 48px; --s16: 64px;
+
+  /* Raios */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-full: 999px;
+
+  /* Movimento — molas calculadas (x(t) de um oscilador amortecido), não durações arbitrárias */
+  --spring: linear(0, 0.042, 0.136, 0.251, 0.368, 0.477, 0.574, 0.657, 0.727, 0.784, 0.831, 0.868, 0.897, 0.921, 0.939, 0.953, 0.964, 0.973, 0.979, 0.984, 0.988, 0.991, 0.993, 0.995, 0.996, 0.997, 0.998, 0.998, 1);
+  --spring-bounce: linear(0, 0.057, 0.195, 0.374, 0.561, 0.733, 0.877, 0.987, 1.063, 1.107, 1.125, 1.124, 1.11, 1.089, 1.065, 1.042, 1.023, 1.007, 0.996, 0.988, 0.985, 0.984, 0.985, 0.988, 0.991, 0.993, 0.996, 0.998, 1, 1.001, 1.002, 1.002, 1.002, 1.002, 1.001, 1.001, 1);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 0.9, 0.3);
+  --t-fast: 140ms;
+  --t-base: 240ms;
+  --t-spring: 520ms;
+  --t-bounce: 700ms;
+
+  /* Layout */
+  --sidebar-w: 256px;
+  --rail-w: 328px;
+  --gutter: 24px;
+  --tabbar-h: 68px;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --glass-fill: #16161b;
+    --glass-fill-strong: #18181e;
+    --glass-blur: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --glass-fill: #121216;
+    --glass-fill-strong: #121216;
+    --glass-blur: none;
+    --line: rgb(255 255 255 / 0.28);
+    --line-strong: rgb(255 255 255 / 0.5);
+    --glass-line: rgb(255 255 255 / 0.4);
+    --text-2: #d6d6dc;
+    --text-3: #b4b4bc;
+  }
+}

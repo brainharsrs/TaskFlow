@@ -1,0 +1,13 @@
+{
+  "name": "taskflow",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "TaskFlow — gestor de tarefas com Firebase Authentication, Cloud Firestore e Firebase Hosting.",
+  "scripts": {
+    "test": "node --test",
+    "serve": "firebase emulators:start --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules",
+    "deploy:hosting": "firebase deploy --only hosting"
+  }
+}
